@@ -227,6 +227,15 @@ thread_block (void)
   schedule ();
 }
 
+
+bool descending_order_of_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+{
+  struct thread *ta = list_entry (a, struct thread, elem);
+  struct thread *tb = list_entry (b, struct thread, elem);
+
+  return ta->priority > tb->priority;
+}
+
 /* Transitions a blocked thread T to the ready-to-run state.
    This is an error if T is not blocked.  (Use thread_yield() to
    make the running thread ready.)
@@ -244,12 +253,12 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_insert_ordered (&ready_list, &t->elem, more_thread_priority, NULL);  //insert threads into ready_list in priority order
+  list_insert_ordered(&ready_list, &t->elem, descending_order_of_priority, NULL);
+
   t->status = THREAD_READY;
   intr_set_level (old_level);
 
   /*생각해볼 점: notion에 적어놓은 것처럼 Unblock 시에도 preemption 되어야 하는지?*/
-
 }
 
 /* Returns the name of the running thread. */
@@ -317,8 +326,10 @@ thread_yield (void)
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
-  if (cur != idle_thread) 
-    list_insert_ordered (&ready_list, &cur->elem, more_thread_priority, NULL);
+  if (cur != idle_thread) {
+    list_insert_ordered(&ready_list, &cur->elem, descending_order_of_priority, NULL);
+  }
+    
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -336,16 +347,6 @@ void thread_preemption(void){
   }
   return;
 }
-
-/*prirority comparing function*/
-bool more_thread_priority (const struct list_elem *a_, const struct list_elem *b_, void *aux UNUSED)
-{
-  const struct thread *a = list_entry (a_, struct thread, elem);
-  const struct thread *b = list_entry (b_, struct thread, elem);
-
-  return a->priority > b->priority;
-}
-
 
 /*wakeup time comparing function*/
 bool less_wakeup_time (const struct list_elem *a,

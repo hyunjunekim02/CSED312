@@ -68,8 +68,9 @@ sema_down (struct semaphore *sema)
   old_level = intr_disable ();
   while (sema->value == 0) 
     {
-      //insert into waiters in list ordered
-      list_insert_ordered (&sema->waiters, &thread_current ()->elem, more_thread_priority, NULL);
+      // list_push_back (&sema->waiters, &thread_current ()->elem);
+      // As, waiters list should sorted by priority, it will be changed to priority_push.
+      list_insert_ordered(&sema->waiters, &thread_current ()->elem, descending_order_of_priority, NULL);
       thread_block ();
     }
   sema->value--;
@@ -114,13 +115,16 @@ sema_up (struct semaphore *sema)
   ASSERT (sema != NULL);
 
   old_level = intr_disable ();
-  if (!list_empty (&sema->waiters))
-    //sort waiters list
-    list_sort(&sema->waiters, more_thread_priority, NULL);
-    thread_unblock (list_entry (list_pop_front (&sema->waiters),
-                                struct thread, elem));
+  if (!list_empty (&sema->waiters)) {
+    list_sort(&sema->waiters, descending_order_of_priority, NULL);
+    thread_unblock (list_entry (list_pop_front (&sema->waiters), struct thread, elem));
+  }
+
   sema->value++;
   intr_set_level (old_level);
+  // What I have to do???
+  // in this function, list_push implement is not called.
+  // it might pointing unblock function?
 }
 
 static void sema_test_helper (void *sema_);
