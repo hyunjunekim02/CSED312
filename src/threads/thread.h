@@ -93,6 +93,12 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
+    /*for priority donation*/
+    struct list donations;
+    struct list_elem d_elem;
+    struct lock *wait_on_lock;
+    //int init_priority - 필요? 
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -135,7 +141,7 @@ void thread_yield (void);
 void thread_preemption (void);
 
 //Comparison functions
-bool less_thread_priority (const struct list_elem *a_, const struct list_elem *b_, void *aux UNUSED);
+bool more_thread_priority (const struct list_elem *a_, const struct list_elem *b_, void *aux UNUSED);
 bool less_wakeup_time (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 
 //스레드를 sleep list로 넣는 함수

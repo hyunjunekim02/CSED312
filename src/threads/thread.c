@@ -244,7 +244,7 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_insert_ordered (&ready_list, &t->elem, less_thread_priority, NULL);  //insert threads into ready_list in priority order
+  list_insert_ordered (&ready_list, &t->elem, more_thread_priority, NULL);  //insert threads into ready_list in priority order
   t->status = THREAD_READY;
   intr_set_level (old_level);
 
@@ -318,7 +318,7 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_insert_ordered (&ready_list, &cur->elem, less_thread_priority, NULL);
+    list_insert_ordered (&ready_list, &cur->elem, more_thread_priority, NULL);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -338,12 +338,12 @@ void thread_preemption(void){
 }
 
 /*prirority comparing function*/
-bool less_thread_priority (const struct list_elem *a_, const struct list_elem *b_, void *aux UNUSED)
+bool more_thread_priority (const struct list_elem *a_, const struct list_elem *b_, void *aux UNUSED)
 {
   const struct thread *a = list_entry (a_, struct thread, elem);
   const struct thread *b = list_entry (b_, struct thread, elem);
 
-  return a->priority < b->priority;
+  return a->priority > b->priority;
 }
 
 
