@@ -104,13 +104,6 @@ timer_sleep (int64_t ticks)
   } 
 }
 
-void
-wakeup ()
-{
-  // move the thread from the sleep list to the read list
-}
-
-
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
    turned on. */
 void

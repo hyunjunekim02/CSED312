@@ -26,8 +26,4 @@ void timer_ndelay (int64_t nanoseconds);
 
 void timer_print_stats (void);
 
-/* Implement sleep/wakeup-based alarm clock*/
-// move the thread from the sleep list to the read list
-void wakeup();
-
 #endif /* devices/timer.h */
