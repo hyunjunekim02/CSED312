@@ -130,6 +130,14 @@ const char *thread_name (void);
 
 void thread_exit (void) NO_RETURN;
 void thread_yield (void);
+
+//Preemption function
+void thread_preemption (void);
+
+//Comparison functions
+bool less_thread_priority (const struct list_elem *a_, const struct list_elem *b_, void *aux UNUSED);
+bool less_wakeup_time (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+
 //스레드를 sleep list로 넣는 함수
 void thread_sleep (int64_t ticks);
 void thread_wakeup(const int64_t current_time);

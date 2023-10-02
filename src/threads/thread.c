@@ -205,6 +205,9 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
+  //compare priorities and yield (preemption)
+  thread_preemption();
+
   return tid;
 }
 
@@ -241,9 +244,12 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  list_insert_ordered (&ready_list, &t->elem, less_thread_priority, NULL);  //insert threads into ready_list in priority order
   t->status = THREAD_READY;
   intr_set_level (old_level);
+
+  /*생각해볼 점: notion에 적어놓은 것처럼 Unblock 시에도 preemption 되어야 하는지?*/
+
 }
 
 /* Returns the name of the running thread. */
@@ -312,12 +318,36 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+    list_insert_ordered (&ready_list, &cur->elem, less_thread_priority, NULL);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
 }
 
+//preemption function
+void thread_preemption(void){
+  if (list_empty(&ready_list)){
+    return;
+  }
+  struct thread *ready_thread = list_entry(list_front(&ready_list), struct thread, elem);
+  struct thread *current = thread_current();
+  if(current->priority < ready_thread->priority){
+    thread_yield();
+  }
+  return;
+}
+
+/*prirority comparing function*/
+bool less_thread_priority (const struct list_elem *a_, const struct list_elem *b_, void *aux UNUSED)
+{
+  const struct thread *a = list_entry (a_, struct thread, elem);
+  const struct thread *b = list_entry (b_, struct thread, elem);
+
+  return a->priority < b->priority;
+}
+
+
+/*wakeup time comparing function*/
 bool less_wakeup_time (const struct list_elem *a,
                        const struct list_elem *b,
                        void *aux UNUSED)
@@ -396,6 +426,7 @@ void
 thread_set_priority (int new_priority) 
 {
   thread_current ()->priority = new_priority;
+  thread_preemption(); //preemption
 }
 
 /* Returns the current thread's priority. */
