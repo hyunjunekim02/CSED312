@@ -325,6 +325,10 @@ bool less_wakeup_time (const struct list_elem *a,
   struct thread *ta = list_entry (a, struct thread, elem);
   struct thread *tb = list_entry (b, struct thread, elem);
 
+  if (ta->wakeup_time == tb->wakeup_time) {
+    return ta->priority > tb->priority;
+  }
+
   return ta->wakeup_time < tb->wakeup_time;
 }
 
