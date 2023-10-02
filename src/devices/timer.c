@@ -92,9 +92,24 @@ timer_sleep (int64_t ticks)
   int64_t start = timer_ticks ();
 
   ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+  // challenge : timer_ticks이 여기의 start값과 다를 수도 있음. 그동안 tick이 흐르면서
+  /*
+    thread_sleep(start + ticks)를 호출하면, 현재 스레드는 start + ticks 시간이 될 때까지 "blocked" 상태가 된다
+    문제는, 현재 thread가 block되고 이후 다른 thread가 실행될 수 있다는건데, 만약 다른 스레드가 실행되면
+    timer_interrupt, timer_tick()를 실행하게 될 수 있고
+    그렇게하면 start 변수의 값은 더 이상 유효하지 않음.
+  */
+  if (timer_elapsed (start) < ticks) {
+    thread_sleep(start + ticks);
+  } 
 }
+
+void
+wakeup ()
+{
+  // move the thread from the sleep list to the read list
+}
+
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
    turned on. */
@@ -167,11 +182,15 @@ timer_print_stats (void)
 }
 
 /* Timer interrupt handler. */
+// 모든 시간마다 wakeup되어야 하는 thread를 sleep_list에서 찾아주는 것 같다
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
+
+  // Check the sleep list for threads to wake up
+  thread_wakeup(ticks);
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

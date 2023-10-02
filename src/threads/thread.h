@@ -100,6 +100,11 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
+    
+    int64_t wakeup_time;
+   // uint8_t nice;
+   // uint8_t recent_cpu;
+   // -> 17.14 fixed-point number로 넣어줘야 할듯
   };
 
 /* If false (default), use round-robin scheduler.
@@ -125,6 +130,9 @@ const char *thread_name (void);
 
 void thread_exit (void) NO_RETURN;
 void thread_yield (void);
+//스레드를 sleep list로 넣는 함수
+void thread_sleep (int64_t ticks);
+void thread_wakeup(const int64_t current_time);
 
 /* Performs some operation on thread t, given auxiliary data AUX. */
 typedef void thread_action_func (struct thread *t, void *aux);

@@ -24,6 +24,9 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
+// List of blocked state thread
+static struct list sleep_list;
+
 /* List of all processes.  Processes are added to this list
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
@@ -92,6 +95,7 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
+  list_init (&sleep_list);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -313,6 +317,58 @@ thread_yield (void)
   schedule ();
   intr_set_level (old_level);
 }
+
+bool less_wakeup_time (const struct list_elem *a,
+                       const struct list_elem *b,
+                       void *aux UNUSED)
+{
+  struct thread *ta = list_entry (a, struct thread, elem);
+  struct thread *tb = list_entry (b, struct thread, elem);
+
+  return ta->wakeup_time < tb->wakeup_time;
+}
+
+void
+thread_sleep(int64_t time_to_wakeup)
+{
+  struct thread *cur = thread_current();
+  enum intr_level old_level;
+  
+  ASSERT (!intr_context ());
+
+  old_level = intr_disable (); // 인터럽트 비활성화 (thread list 수정하기 전에 비활성화 해줘야함)
+  if (cur == idle_thread)
+    return;  // idle 스레드는 sleep 상태가 될 수 없으므로 함수를 종료
+  
+  //list_push_back (&sleep_list, &cur->elem);
+  cur->wakeup_time = time_to_wakeup;
+  // update global tick if necessary - 필요한가?
+  list_insert_ordered(&sleep_list, &cur->elem, less_wakeup_time, NULL);  // sleep_list에 삽입
+  thread_block();
+
+  intr_set_level(old_level);  // 인터럽트 레벨 복원
+}
+
+
+void
+thread_wakeup(const int64_t current_time)
+{
+  struct list_elem *iter = list_begin(&sleep_list);
+  while (iter != list_end(&sleep_list))
+  {
+    struct thread *t = list_entry(iter, struct thread, elem);
+    if (current_time >= t->wakeup_time)
+    {
+      iter = list_remove(iter);  // Remove from sleep list and get next element
+      thread_unblock(t);   // Unblock thread and add it to ready list
+    }
+    else
+    {
+      break;  // The list is sorted, no need to go further
+    }
+  }
+}
+
 
 /* Invoke function 'func' on all threads, passing along 'aux'.
    This function must be called with interrupts off. */
