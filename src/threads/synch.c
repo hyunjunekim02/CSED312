@@ -289,20 +289,6 @@ lock_release (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
 
-  // struct thread *current = thread_current();
-
-  // // remove donations of current lock(implementation for multiple donation)
-  // struct list_elem *e, *next;
-  // for (e = list_begin(&current->donations); e != list_end(&current->donations); e = next){
-  //   struct thread *donor = list_entry(e, struct thread, d_elem);
-  //   next = list_next(e);
-  //   if (donor->wait_on_lock == lock){
-  //     list_remove(e);
-  //   }
-  // }
-
-  // // priroty donation to restore priority
-  // donate_priority(current);
   struct thread *current_thread = thread_current();
 
   struct list_elem *e;
@@ -315,17 +301,12 @@ lock_release (struct lock *lock)
 
   current_thread->priority = current_thread->original_priority;
   if (!list_empty(&current_thread->donations)) {
-    lock->holder = NULL;
-    sema_up (&lock->semaphore);
-    return;
+    list_sort(&current_thread->donations, set_donators_to_priority_descending, NULL);
+    struct thread *higiest_priority_donator = list_entry(list_front(&current_thread->donations), struct thread, d_elem);
+    if (higiest_priority_donator->priority > current_thread->priority) {
+      current_thread->priority = higiest_priority_donator->priority;
+    }
   }
-
-  list_sort(&current_thread->donations, set_donators_to_priority_descending, NULL);
-  struct thread *higiest_priority_donator = list_entry(list_front(&current_thread->donations), struct thread, d_elem);
-  if (higiest_priority_donator->priority > current_thread->priority) {
-    current_thread->priority = higiest_priority_donator->priority;
-  }
-  
 
   lock->holder = NULL;
   sema_up (&lock->semaphore);
