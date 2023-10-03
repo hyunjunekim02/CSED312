@@ -190,7 +190,7 @@ void donate_priority(struct thread *t){
   // Original priroty if no donations
   int highest_priority = t->original_priority;
 
-  // Search donations list
+  // Search donations list through d_elem
   struct list_elem *e;
   for (e = list_begin(&t->donations); e != list_end(&t->donations); e = list_next(e)){
     struct thread *donor = list_entry(e, struct thread, d_elem);
