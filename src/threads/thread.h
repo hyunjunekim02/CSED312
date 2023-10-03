@@ -94,9 +94,9 @@ struct thread
     struct list_elem elem;              /* List element. */
 
     /* Priority donation */
-    struct list donations;
-    struct list_elem d_elem;
-    struct lock *wait_on_lock;
+    struct list donations;    // donators_list가 더 나을듯 저것만 갖고는 list인지도 헷갈림
+    struct list_elem d_elem;  // contained data in donations list. not thread, but d_element
+    struct lock *wait_on_lock;   // The lock the thread is currently waiting to obtain
     int original_priority;
 
 #ifdef USERPROG

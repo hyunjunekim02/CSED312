@@ -422,14 +422,14 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  struct thread *current = thread_current();
+  //struct thread *current = thread_current();
   thread_current ()->priority = new_priority;
   
   // Case of priority donated
-  if (list_empty(&current->donations) || new_priority > current->priority)
-  {
-    current->priority = new_priority;
-  }
+  // if (list_empty(&current->donations) || new_priority > current->priority)
+  // {
+  //   current->priority = new_priority;
+  // }
   thread_preemption();
 }
 
@@ -563,7 +563,7 @@ init_thread (struct thread *t, const char *name, int priority)
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
 
-  /* update data structures for priority donation */
+  /* Initailize thread's field for priority donation */
   list_init (&t->donations);
   t->wait_on_lock = NULL;
   t->original_priority = priority;
