@@ -28,6 +28,8 @@ void lock_init (struct lock *);
 
 //priority donation function
 void donate_priority(struct thread *t);
+void _donate_priority(struct thread *tracked_thread);
+void release_donated_priority(struct lock *lock);
 
 void lock_acquire (struct lock *);
 bool lock_try_acquire (struct lock *);
@@ -47,6 +49,7 @@ void cond_broadcast (struct condition *, struct lock *);
 
 // My helper function for semaphore reordering
 bool more_sema_priority(const struct list_elem *a, const struct list_elem *b, void *);
+bool set_donators_to_priority_descending (const struct list_elem *a, const struct list_elem *b, void *);
 
 /* Optimization barrier.
 

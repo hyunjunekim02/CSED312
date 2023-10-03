@@ -184,6 +184,25 @@ lock_init (struct lock *lock)
   sema_init (&lock->semaphore, 1);
 }
 
+bool set_donators_to_priority_descending (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+{
+  struct thread *ta = list_entry (a, struct thread, d_elem);
+  struct thread *tb = list_entry (b, struct thread, d_elem);
+
+  return ta->priority > tb->priority;
+}
+
+/* Priority donation function */
+// Tracked_thread's priority is always bigger than priority of both lock-holder thread and donator threads
+void _donate_priority(struct thread *tracked_thread) {
+  if (tracked_thread->wait_on_lock == NULL) {
+    return;
+  }
+  struct thread *holder_thread = tracked_thread->wait_on_lock->holder;
+  holder_thread->priority = tracked_thread->priority;
+  _donate_priority(holder_thread);
+}
+
 /* Priority donation function */
 void donate_priority(struct thread *t){
   ASSERT(t != NULL);
@@ -219,22 +238,24 @@ lock_acquire (struct lock *lock)
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
 
-  struct thread *current = thread_current();
-  struct thread *holder = lock->holder;
+  struct thread *current_thread = thread_current();
+  struct thread *lock_holder = lock->holder;
 
   //store original priority
-  current->original_priority = current->priority;
+  current_thread->original_priority = current_thread->priority;
 
   //if holder exist
-  if(holder){
-    current->wait_on_lock = lock;
-    list_push_back(&holder->donations, &current->d_elem);
-    donate_priority(holder);
+  if(lock_holder){
+    current_thread->wait_on_lock = lock;
+    //list_push_back(&holder->donations, &current->d_elem);
+    list_insert_ordered(&lock_holder->donations, &current_thread->d_elem, set_donators_to_priority_descending, NULL);
+    //donate_priority(lock_holder);
+    _donate_priority(thread_current());
   }
 
   sema_down (&lock->semaphore);
-  lock->holder = current;
-  current->wait_on_lock = NULL;
+  lock->holder = current_thread;
+  current_thread->wait_on_lock = NULL;
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
