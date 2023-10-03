@@ -257,8 +257,6 @@ thread_unblock (struct thread *t)
 
   t->status = THREAD_READY;
   intr_set_level (old_level);
-
-  /*생각해볼 점: notion에 적어놓은 것처럼 Unblock 시에도 preemption 되어야 하는지?*/
 }
 
 /* Returns the name of the running thread. */
@@ -370,13 +368,13 @@ thread_sleep(int64_t time_to_wakeup)
   ASSERT (!intr_context ());
 
   old_level = intr_disable (); // 인터럽트 비활성화 (thread list 수정하기 전에 비활성화 해줘야함)
-  if (cur == idle_thread)
-    return;  // idle 스레드는 sleep 상태가 될 수 없으므로 함수를 종료
+  if (cur == idle_thread) {
+    return;
+  }
   
-  //list_push_back (&sleep_list, &cur->elem);
   cur->wakeup_time = time_to_wakeup;
   // update global tick if necessary - 필요한가?
-  list_insert_ordered(&sleep_list, &cur->elem, less_wakeup_time, NULL);  // sleep_list에 삽입
+  list_insert_ordered(&sleep_list, &cur->elem, less_wakeup_time, NULL);
   thread_block();
 
   intr_set_level(old_level);  // 인터럽트 레벨 복원
@@ -392,12 +390,12 @@ thread_wakeup(const int64_t current_time)
     struct thread *t = list_entry(iter, struct thread, elem);
     if (current_time >= t->wakeup_time)
     {
-      iter = list_remove(iter);  // Remove from sleep list and get next element
-      thread_unblock(t);   // Unblock thread and add it to ready list
+      iter = list_remove(iter);
+      thread_unblock(t);
     }
     else
     {
-      break;  // The list is sorted, no need to go further
+      break;
     }
   }
 }
@@ -425,7 +423,7 @@ void
 thread_set_priority (int new_priority) 
 {
   thread_current ()->priority = new_priority;
-  thread_preemption(); //preemption
+  thread_preemption();
 }
 
 /* Returns the current thread's priority. */
