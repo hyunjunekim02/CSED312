@@ -335,14 +335,14 @@ thread_yield (void)
   intr_set_level (old_level);
 }
 
-//preemption function
+// preemption function
 void thread_preemption(void){
-  if (list_empty(&ready_list)){
+  if (list_empty(&ready_list)) {
     return;
   }
   struct thread *ready_thread = list_entry(list_front(&ready_list), struct thread, elem);
   struct thread *current = thread_current();
-  if(current->priority < ready_thread->priority){
+  if (current->priority < ready_thread->priority) {
     thread_yield();
   }
   return;
