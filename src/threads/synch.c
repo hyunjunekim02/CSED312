@@ -242,10 +242,10 @@ lock_acquire (struct lock *lock)
   struct thread *lock_holder = lock->holder;
 
   //store original priority
-  current_thread->original_priority = current_thread->priority;
+  //current_thread->original_priority = current_thread->priority;
 
   //if holder exist
-  if(lock_holder){
+  if (lock_holder != NULL) {
     current_thread->wait_on_lock = lock;
     //list_push_back(&holder->donations, &current->d_elem);
     list_insert_ordered(&lock_holder->donations, &current_thread->d_elem, set_donators_to_priority_descending, NULL);
