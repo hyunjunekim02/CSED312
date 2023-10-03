@@ -97,7 +97,7 @@ struct thread
     struct list donations;
     struct list_elem d_elem;
     struct lock *wait_on_lock;
-    //int init_priority - 필요? 
+    int original_priority;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
