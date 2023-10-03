@@ -70,7 +70,7 @@ sema_down (struct semaphore *sema)
     {
       // list_push_back (&sema->waiters, &thread_current ()->elem);
       // As, waiters list should sorted by priority, it will be changed to priority_push.
-      list_insert_ordered(&sema->waiters, &thread_current ()->elem, descending_order_of_priority, NULL);
+      list_insert_ordered(&sema->waiters, &thread_current ()->elem, set_list_to_priority_descending, NULL);
       thread_block ();
     }
   sema->value--;
@@ -116,15 +116,12 @@ sema_up (struct semaphore *sema)
 
   old_level = intr_disable ();
   if (!list_empty (&sema->waiters)) {
-    list_sort(&sema->waiters, descending_order_of_priority, NULL);
+    list_sort(&sema->waiters, set_list_to_priority_descending, NULL);
     thread_unblock (list_entry (list_pop_front (&sema->waiters), struct thread, elem));
   }
 
   sema->value++;
   intr_set_level (old_level);
-  // What I have to do???
-  // in this function, list_push implement is not called.
-  // it might pointing unblock function?
 }
 
 static void sema_test_helper (void *sema_);
@@ -162,17 +159,6 @@ sema_test_helper (void *sema_)
       sema_down (&sema[0]);
       sema_up (&sema[1]);
     }
-}
-
-//semaphore comparing function
-bool more_sema_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED) {
-    struct semaphore *sema_a = &(list_entry(a, struct semaphore_elem, elem)->semaphore);
-    struct semaphore *sema_b = &(list_entry(b, struct semaphore_elem, elem)->semaphore);
-
-    int priority_a = list_empty(&(sema_a->waiters)) ? PRI_MIN - 1 : list_entry(list_front(&(sema_a->waiters)), struct thread, elem)->priority;
-    int priority_b = list_empty(&(sema_b->waiters)) ? PRI_MIN - 1 : list_entry(list_front(&(sema_b->waiters)), struct thread, elem)->priority;
-
-    return priority_a > priority_b;
 }
 
 
@@ -271,6 +257,17 @@ struct semaphore_elem
     struct list_elem elem;              /* List element. */
     struct semaphore semaphore;         /* This semaphore. */
   };
+
+// semaphore comparing function
+bool more_sema_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED) {
+    struct semaphore *sema_a = &(list_entry(a, struct semaphore_elem, elem)->semaphore);
+    struct semaphore *sema_b = &(list_entry(b, struct semaphore_elem, elem)->semaphore);
+
+    int priority_a = list_empty(&(sema_a->waiters)) ? PRI_MIN - 1 : list_entry(list_front(&(sema_a->waiters)), struct thread, elem)->priority;
+    int priority_b = list_empty(&(sema_b->waiters)) ? PRI_MIN - 1 : list_entry(list_front(&(sema_b->waiters)), struct thread, elem)->priority;
+
+    return priority_a > priority_b;
+}
 
 /* Initializes condition variable COND.  A condition variable
    allows one piece of code to signal a condition and cooperating

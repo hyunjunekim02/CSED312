@@ -205,7 +205,7 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
-  //compare priorities and yield (preemption)
+  // compare priorities and yield (preemption)
   thread_preemption();
 
   return tid;
@@ -228,7 +228,7 @@ thread_block (void)
 }
 
 
-bool descending_order_of_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+bool set_list_to_priority_descending (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
 {
   struct thread *ta = list_entry (a, struct thread, elem);
   struct thread *tb = list_entry (b, struct thread, elem);
@@ -253,7 +253,7 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_insert_ordered(&ready_list, &t->elem, descending_order_of_priority, NULL);
+  list_insert_ordered(&ready_list, &t->elem, set_list_to_priority_descending, NULL);
 
   t->status = THREAD_READY;
   intr_set_level (old_level);
@@ -327,7 +327,7 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) {
-    list_insert_ordered(&ready_list, &cur->elem, descending_order_of_priority, NULL);
+    list_insert_ordered(&ready_list, &cur->elem, set_list_to_priority_descending, NULL);
   }
     
   cur->status = THREAD_READY;
@@ -348,10 +348,8 @@ void thread_preemption(void){
   return;
 }
 
-/*wakeup time comparing function*/
-bool less_wakeup_time (const struct list_elem *a,
-                       const struct list_elem *b,
-                       void *aux UNUSED)
+/* wakeup time comparing function */
+bool less_wakeup_time (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
 {
   struct thread *ta = list_entry (a, struct thread, elem);
   struct thread *tb = list_entry (b, struct thread, elem);
