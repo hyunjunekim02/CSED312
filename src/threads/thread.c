@@ -61,6 +61,7 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
 bool thread_mlfqs;
+fp_t load_avg;
 
 static void kernel_thread (thread_func *, void *aux);
 
@@ -469,24 +470,48 @@ thread_set_nice (int nice UNUSED)
 int
 thread_get_nice (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  /* interrupt disable needed */
+  enum intr_level old_level;
+  old_level = intr_disable();
+
+  int return_nice = thread_current()->nice;
+
+  /* Restore interrupt level */
+  intr_set_level(old_level);
+
+  return return_nice;
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  /* interrupt disable needed */
+  enum intr_level old_level;
+  old_level = intr_disable();
+
+  int return_load_avg = fp_x_to_int_round_nearest(fp_multiply_x_by_n(load_avg, 100));
+
+  /* Restore interrupt level */
+  intr_set_level(old_level);
+
+  return return_load_avg;
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  /* interrupt disable needed */
+  enum intr_level old_level;
+  old_level = intr_disable();
+
+  int return_recent_cpu = fp_x_to_int_round_nearest(fp_multiply_x_by_n(thread_current()->recent_cpu, 100));
+
+  /* Restore interrupt level */
+  intr_set_level(old_level);
+
+  return return_recent_cpu;
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -588,8 +613,8 @@ init_thread (struct thread *t, const char *name, int priority)
   //d_elem initialize 필요?
 
   /* Initialize mlfqs */
-  t->recent_cpu=0;
-  t->nice=0;
+  t->recent_cpu = 0;
+  t->nice = 0;
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
