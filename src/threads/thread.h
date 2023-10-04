@@ -159,5 +159,6 @@ int thread_get_load_avg (void);
 // My helper function for sorting list with priority
 bool less_wakeup_time (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 bool set_list_to_priority_descending (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+void update_current_thread_priority_with_donators();
 
 #endif /* threads/thread.h */

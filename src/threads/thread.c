@@ -418,18 +418,36 @@ thread_foreach (thread_action_func *func, void *aux)
     }
 }
 
+void
+update_current_thread_priority_with_donators (void)
+{
+  struct thread *current_thread = thread_current ();
+  int original_priority_of_current = current_thread->original_priority;
+  
+  if (list_empty (&current_thread->donations)) {
+    current_thread->priority = original_priority_of_current;
+    return;
+  }
+
+  int biggest_priority_of_donator_list = list_entry (list_front(&current_thread->donations), struct thread, d_elem)->priority;
+  original_priority_of_current = (biggest_priority_of_donator_list > original_priority_of_current) ? biggest_priority_of_donator_list : original_priority_of_current;  
+
+  current_thread->priority = original_priority_of_current;
+}
+
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) 
 {
-  //struct thread *current = thread_current();
-  thread_current ()->priority = new_priority;
+  thread_current ()->original_priority = new_priority;
+  //struct thread *current = thread_current ();
   
   // Case of priority donated
   // if (list_empty(&current->donations) || new_priority > current->priority)
   // {
   //   current->priority = new_priority;
   // }
+  update_current_thread_priority_with_donators();
   thread_preemption();
 }
 

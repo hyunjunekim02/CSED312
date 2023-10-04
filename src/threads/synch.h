@@ -26,10 +26,8 @@ struct lock
 
 void lock_init (struct lock *);
 
-//priority donation function
-//void donate_priority(struct thread *t);
-void _donate_priority(struct thread *tracked_thread);
-void release_donated_priority(struct lock *lock);
+// My priority donation function
+void donate_priority(struct thread *tracked_thread);
 
 void lock_acquire (struct lock *);
 bool lock_try_acquire (struct lock *);

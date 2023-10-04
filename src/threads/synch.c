@@ -119,6 +119,9 @@ sema_up (struct semaphore *sema)
   }
 
   sema->value++;
+
+  // preemption 안만들어서 오류 생겼었음
+  thread_preemption ();
   intr_set_level (old_level);
 }
 
@@ -192,36 +195,16 @@ bool set_donators_to_priority_descending (const struct list_elem *a, const struc
   return ta->priority > tb->priority;
 }
 
-/* Priority donation function */
 // Tracked_thread's priority is always bigger than priority of both lock-holder thread and donator threads
-void _donate_priority(struct thread *tracked_thread) {
+void
+donate_priority(struct thread *tracked_thread) {
   if (tracked_thread->wait_on_lock == NULL) {
     return;
   }
   struct thread *holder_thread = tracked_thread->wait_on_lock->holder;
   holder_thread->priority = tracked_thread->priority;
-  _donate_priority(holder_thread);
+  donate_priority(holder_thread);
 }
-
-/* Priority donation function */
-// void donate_priority(struct thread *t){
-//   ASSERT(t != NULL);
-//   // Original priroty if no donations
-//   int highest_priority = t->original_priority;
-
-//   // Search donations list through d_elem 
-//   struct list_elem *e;
-//   for (e = list_begin(&t->donations); e != list_end(&t->donations); e = list_next(e)){
-//     struct thread *donor = list_entry(e, struct thread, d_elem);
-//     if (donor->priority > highest_priority){
-//       highest_priority = donor->priority;
-//     }
-//   }
-
-//   // priority update(donation)
-//   t->priority = highest_priority;
-//   return;
-// }
 
 /* Acquires LOCK, sleeping until it becomes available if
    necessary.  The lock must not already be held by the current
@@ -241,21 +224,19 @@ lock_acquire (struct lock *lock)
   struct thread *current_thread = thread_current();
   struct thread *lock_holder = lock->holder;
 
-  //store original priority
-  //current_thread->original_priority = current_thread->priority;
-
-  //if holder exist
   if (lock_holder != NULL) {
+    //if holder exist
     current_thread->wait_on_lock = lock;
-    //list_push_back(&holder->donations, &current->d_elem);
+    //list_push_back(&lock_holder->donations, &current_thread->d_elem);
     list_insert_ordered(&lock_holder->donations, &current_thread->d_elem, set_donators_to_priority_descending, NULL);
-    //donate_priority(lock_holder);
-    _donate_priority(thread_current());
+    donate_priority(current_thread);
   }
 
   sema_down (&lock->semaphore);
-  lock->holder = current_thread;
+  // 혹시 여기서 current thread 바뀌나 ?????
+  // 뭐땜에 에러 안되던게 해결되는거지
   current_thread->wait_on_lock = NULL;
+  lock->holder = current_thread;
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -290,8 +271,8 @@ lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
 
   struct thread *current_thread = thread_current();
-
   struct list_elem *e;
+
   for (e = list_begin(&current_thread->donations); e != list_end(&current_thread->donations); e = list_next(e)) {
     struct thread *donator = list_entry(e, struct thread, d_elem);
     if (donator->wait_on_lock == lock){
@@ -299,14 +280,7 @@ lock_release (struct lock *lock)
     }
   }
 
-  current_thread->priority = current_thread->original_priority;
-  if (!list_empty(&current_thread->donations)) {
-    list_sort(&current_thread->donations, set_donators_to_priority_descending, NULL);
-    struct thread *higiest_priority_donator = list_entry(list_front(&current_thread->donations), struct thread, d_elem);
-    if (higiest_priority_donator->priority > current_thread->priority) {
-      current_thread->priority = higiest_priority_donator->priority;
-    }
-  }
+  update_current_thread_priority_with_donators();
 
   lock->holder = NULL;
   sema_up (&lock->semaphore);
@@ -406,8 +380,7 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
 
   if (!list_empty (&cond->waiters))
     list_sort (&cond->waiters, more_sema_priority, NULL);
-    sema_up (&list_entry (list_pop_front (&cond->waiters),
-                          struct semaphore_elem, elem)->semaphore);
+    sema_up (&list_entry (list_pop_front (&cond->waiters), struct semaphore_elem, elem)->semaphore);
 }
 
 /* Wakes up all threads, if any, waiting on COND (protected by
