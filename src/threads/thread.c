@@ -116,6 +116,9 @@ thread_start (void)
   sema_init (&idle_started, 0);
   thread_create ("idle", PRI_MIN, idle, &idle_started);
 
+  /* should initialize load_avg*/
+  load_avg = 0;
+  
   /* Start preemptive thread scheduling. */
   intr_enable ();
 
@@ -445,7 +448,7 @@ update_current_thread_priority_with_donators (void)
 int calculate_priority(fp_t recent_cpu, int nice){
   
   //calculation
-  int priority = fp_x_to_int_round_nearest(fp_add_x_and_n(fp_subtract_n_from_x(nice * 2, fp_divide_x_by_n(recent_cpu, -4)), PRI_MAX));
+  int priority = fp_x_to_int_round_nearest(fp_add_x_and_n(fp_subtract_n_from_x(PRI_MAX, fp_add_x_and_n(fp_divide_x_by_n(recent_cpu, 4), nice * 2)), PRI_MAX));
 
   //three possible cases
   if(priority>PRI_MAX){
@@ -505,7 +508,7 @@ void set_all_priority_and_recent_cpu(int64_t ticks){
       update_load_avg();
       t->recent_cpu=recent_cpu;
     }
-    if(ticks % 4 == 0){ //update priority every 4 ticks
+    if(ticks % 4 == 0 && t!=idle_thread){ //update priority every 4 ticks
       t->priority=priority;
     }
   }
@@ -556,9 +559,7 @@ thread_set_nice (int nice UNUSED)
     t->priority = calculate_priority(t->recent_cpu, t->nice);
     /* sort ready list and preempt */
     list_sort (&ready_list, set_list_to_priority_descending, NULL);
-    if (t != idle_thread){
-      thread_preemption();
-    }
+    thread_preemption();
   }
 
   /* Restore interrupt level */

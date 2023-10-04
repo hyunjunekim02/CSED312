@@ -13,10 +13,10 @@ format:
 
 //fp operation functions
 fp_t fp_n_to_fp(int n);
-int fp_x_to_int_round_zero(fp_t x);
+int fp_x_to_int_round_zero(fp_t x); //not used
 int fp_x_to_int_round_nearest(fp_t x);
 fp_t fp_add(fp_t x, fp_t y);
-fp_t fp_subtract_y_from_x(fp_t x, fp_t y);
+fp_t fp_subtract_y_from_x(fp_t y, fp_t x);  //not used
 fp_t fp_add_x_and_n(fp_t x, int n);
 fp_t fp_subtract_n_from_x(int n, fp_t x);
 fp_t fp_multiply_x_by_y(fp_t x, fp_t y);  //x should be int64_t
@@ -45,7 +45,7 @@ fp_t fp_add(fp_t x, fp_t y){
     return x + y;
 }
 
-fp_t fp_subtract_y_from_x(fp_t x, fp_t y){
+fp_t fp_subtract_y_from_x(fp_t y, fp_t x){
     return x - y;
 }
 
