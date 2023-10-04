@@ -224,7 +224,7 @@ lock_acquire (struct lock *lock)
   struct thread *current_thread = thread_current();
   struct thread *lock_holder = lock->holder;
 
-  /* Forbid the priority donation when using the advanced scheduler. */
+  /* No priority donation when using mlfqs */
   if (thread_mlfqs){
     sema_down (&lock->semaphore);
     lock->holder = current_thread;
@@ -280,7 +280,7 @@ lock_release (struct lock *lock)
   struct thread *current_thread = thread_current();
   struct list_elem *e;
 
-  /* Forbid the priority donation when using the advanced scheduler. */
+  /* No priority donation when using mlfqs */
   if (!thread_mlfqs){
 
     //removing donator

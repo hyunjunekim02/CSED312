@@ -154,6 +154,10 @@ void thread_foreach (thread_action_func *, void *);
 
 /* functions for mlfqs */
 int calculate_priority(fp_t recent_cpu, int nice);
+fp_t calculate_recent_cpu(fp_t recent_cpu, int nice);
+void update_load_avg(void);
+void increment_recent_cpu(void);
+void set_all_priority_and_recent_cpu(void);
 
 int thread_get_priority (void);
 void thread_set_priority (int);

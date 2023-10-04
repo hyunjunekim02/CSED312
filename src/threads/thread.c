@@ -458,11 +458,61 @@ int calculate_priority(fp_t recent_cpu, int nice){
   }
 }
 
+/* recent_cpu = decay * recent_cpu + nice, decay = (2*load_avg)/(2*load_avg+1) */
+fp_t calculate_recent_cpu(fp_t recent_cpu, int nice){
+  fp_t decay = fp_divide_x_by_y(fp_multiply_x_by_n(load_avg, 2), fp_add_x_and_n(fp_multiply_x_by_n(load_avg, 2), 1));
+  return fp_add_x_and_n(fp_multiply_x_by_y(decay, recent_cpu), nice);
+}
+
+/* load_avg = (59/60)*load_avg + (1/60)*ready_threads */
+void update_load_avg(void){
+  int ready_threads = list_size(&ready_list);
+
+  /* include running thread if not a idle */
+  if (thread_current () != idle_thread){
+    ready_threads++;
+  }
+  
+  /* Calculation */
+  fp_t temp1 = fp_multiply_x_by_y(fp_divide_x_by_n(fp_n_to_fp(59), 60), load_avg);
+  fp_t temp2 = fp_multiply_x_by_n(fp_divide_x_by_n(fp_n_to_fp(1), 60), ready_threads);
+  load_avg = fp_add(temp1, temp2);
+}
+
+/* increment recent cpu 1 */
+void increment_recent_cpu(void){
+  struct thread *current = thread_current();
+  if (current != idle_thread){
+    current -> recent_cpu = fp_add_x_and_n(current->recent_cpu, 1);
+  }
+}
+
+/* update every threads' priority and recent_cpu */
+void set_all_priority_and_recent_cpu(void){
+  int priority;
+  fp_t recent_cpu;
+
+  /* traverse every threads */
+  struct list_elem *e;
+  for (e = list_begin (&all_list); e != list_end (&all_list); e = list_next (e)) {
+    struct thread *t = list_entry (e, struct thread, allelem);
+    priority = calculate_priority(t->recent_cpu, t->nice);
+    recent_cpu = calculate_recent_cpu(t->recent_cpu, t->nice);
+    //tick 체크하는 로직
+    t->priority=priority;
+    t->recent_cpu=recent_cpu;
+  }
+}
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) 
-{
+{ 
+  /* Disable priority setting when mlfqs */
+  if (thread_mlfqs){
+    return;
+  }
+
   thread_current ()->original_priority = new_priority;
   //struct thread *current = thread_current ();
   
