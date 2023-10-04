@@ -224,6 +224,13 @@ lock_acquire (struct lock *lock)
   struct thread *current_thread = thread_current();
   struct thread *lock_holder = lock->holder;
 
+  /* Forbid the priority donation when using the advanced scheduler. */
+  if (thread_mlfqs){
+    sema_down (&lock->semaphore);
+    lock->holder = current_thread;
+    return;
+  }
+
   if (lock_holder != NULL) {
     //if holder exist
     current_thread->wait_on_lock = lock;
@@ -273,14 +280,19 @@ lock_release (struct lock *lock)
   struct thread *current_thread = thread_current();
   struct list_elem *e;
 
-  for (e = list_begin(&current_thread->donations); e != list_end(&current_thread->donations); e = list_next(e)) {
-    struct thread *donator = list_entry(e, struct thread, d_elem);
-    if (donator->wait_on_lock == lock){
-      list_remove(&donator->d_elem);
-    }
-  }
+  /* Forbid the priority donation when using the advanced scheduler. */
+  if (!thread_mlfqs){
 
-  update_current_thread_priority_with_donators();
+    //removing donator
+    for (e = list_begin(&current_thread->donations); e != list_end(&current_thread->donations); e = list_next(e)) {
+      struct thread *donator = list_entry(e, struct thread, d_elem);
+      if (donator->wait_on_lock == lock){
+        list_remove(&donator->d_elem);
+      }
+    }
+
+    update_current_thread_priority_with_donators();
+  }
 
   lock->holder = NULL;
   sema_up (&lock->semaphore);
