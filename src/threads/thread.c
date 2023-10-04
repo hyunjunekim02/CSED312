@@ -586,6 +586,10 @@ init_thread (struct thread *t, const char *name, int priority)
   t->wait_on_lock = NULL;
   t->original_priority = priority;
   //d_elem initialize 필요?
+
+  /* Initialize mlfqs */
+  t->recent_cpu=0;
+  t->nice=0;
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and

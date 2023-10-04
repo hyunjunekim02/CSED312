@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "fixed_point.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -99,6 +100,10 @@ struct thread
     struct lock *wait_on_lock;   // The lock the thread is currently waiting to obtain
     int original_priority;
 
+    /*for mlfqs (use 17.14 fixed point)*/
+    int nice;
+    int recent_cpu;
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
@@ -107,10 +112,8 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
     
+    /* wake up time used in priority scheduling*/
     int64_t wakeup_time;
-   // uint8_t nice;
-   // uint8_t recent_cpu;
-   // -> 17.14 fixed-point number로 넣어줘야 할듯
   };
 
 /* If false (default), use round-robin scheduler.
