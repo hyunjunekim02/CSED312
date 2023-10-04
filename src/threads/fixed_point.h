@@ -6,9 +6,7 @@ format:
 */
 
 #include <stdint.h>
-
-//floating point type
-typedef int fp_t
+#include "threads/thread.h"
 
 //floating point mecro
 #define FP (1 << 14)

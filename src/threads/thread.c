@@ -11,6 +11,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "threads/fixed_point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -488,9 +489,10 @@ void increment_recent_cpu(void){
 }
 
 /* update every threads' priority and recent_cpu */
-void set_all_priority_and_recent_cpu(void){
+void set_all_priority_and_recent_cpu(int64_t ticks){
   int priority;
   fp_t recent_cpu;
+  int timer_freq = 100;
 
   /* traverse every threads */
   struct list_elem *e;
@@ -498,9 +500,14 @@ void set_all_priority_and_recent_cpu(void){
     struct thread *t = list_entry (e, struct thread, allelem);
     priority = calculate_priority(t->recent_cpu, t->nice);
     recent_cpu = calculate_recent_cpu(t->recent_cpu, t->nice);
-    //tick 체크하는 로직
-    t->priority=priority;
-    t->recent_cpu=recent_cpu;
+    //check ticks for updates
+    if(ticks % timer_freq == 0){  //update recent_cpu and load average every second
+      update_load_avg();
+      t->recent_cpu=recent_cpu;
+    }
+    if(ticks % 4 == 0){ //update priority every 4 ticks
+      t->priority=priority;
+    }
   }
 }
 

@@ -4,7 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
-#include "fixed_point.h"
+// #include "threads/fixed_point.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -19,6 +19,9 @@ enum thread_status
    You can redefine this to whatever type you like. */
 typedef int tid_t;
 #define TID_ERROR ((tid_t) -1)          /* Error value for tid_t. */
+
+//floating point type
+typedef int fp_t;
 
 /* Thread priorities. */
 #define PRI_MIN 0                       /* Lowest priority. */
@@ -157,7 +160,7 @@ int calculate_priority(fp_t recent_cpu, int nice);
 fp_t calculate_recent_cpu(fp_t recent_cpu, int nice);
 void update_load_avg(void);
 void increment_recent_cpu(void);
-void set_all_priority_and_recent_cpu(void);
+void set_all_priority_and_recent_cpu(int64_t ticks);
 
 int thread_get_priority (void);
 void thread_set_priority (int);
@@ -170,6 +173,6 @@ int thread_get_load_avg (void);
 // My helper function for sorting list with priority
 bool less_wakeup_time (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 bool set_list_to_priority_descending (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
-void update_current_thread_priority_with_donators();
+void update_current_thread_priority_with_donators(void);
 
 #endif /* threads/thread.h */

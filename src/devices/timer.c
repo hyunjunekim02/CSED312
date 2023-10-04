@@ -182,6 +182,11 @@ timer_interrupt (struct intr_frame *args UNUSED)
   ticks++;
   thread_tick ();
 
+  if(thread_mlfqs){
+    increment_recent_cpu();
+    set_all_priority_and_recent_cpu(ticks);
+  }
+
   // Check the sleep list for threads to wake up
   thread_wakeup(ticks);
 }
