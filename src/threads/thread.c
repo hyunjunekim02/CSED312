@@ -436,6 +436,29 @@ update_current_thread_priority_with_donators (void)
   current_thread->priority = original_priority_of_current;
 }
 
+/*
+  Functions for mlfqs are following below
+*/
+
+/* priority = PRI_MAX - (recent_cpu/4) - (nice * 2) */
+int calculate_priority(fp_t recent_cpu, int nice){
+  
+  //calculation
+  int priority = fp_x_to_int_round_nearest(fp_add_x_and_n(fp_subtract_n_from_x(nice * 2, fp_divide_x_by_n(recent_cpu, -4)), PRI_MAX));
+
+  //three possible cases
+  if(priority>PRI_MAX){
+    return PRI_MAX;
+  }
+  else if (priority<PRI_MIN){
+    return PRI_MIN;
+  }
+  else{
+    return priority;
+  }
+}
+
+
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) 
@@ -463,7 +486,26 @@ thread_get_priority (void)
 void
 thread_set_nice (int nice UNUSED) 
 {
-  /* Not yet implemented. */
+  /* interrupt disable needed */
+  enum intr_level old_level;
+  old_level = intr_disable();
+
+  /* Set nice of current thread */
+  struct thread *t = thread_current();
+  t->nice = nice;
+
+  /* set priority if it is not idle */
+  if(t != idle_thread){
+    t->priority = calculate_priority(t->recent_cpu, t->nice);
+    /* sort ready list and preempt */
+    list_sort (&ready_list, set_list_to_priority_descending, NULL);
+    if (t != idle_thread){
+      thread_preemption();
+    }
+  }
+
+  /* Restore interrupt level */
+  intr_set_level(old_level);
 }
 
 /* Returns the current thread's nice value. */
