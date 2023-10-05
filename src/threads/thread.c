@@ -492,7 +492,7 @@ void increment_recent_cpu(void){
 }
 
 /* update every threads' priority and recent_cpu */
-void set_all_priority_and_recent_cpu(int64_t ticks){
+void set_all_priority_and_recent_cpu(bool check){
   int priority;
   fp_t recent_cpu;
   int timer_freq = 100;
@@ -504,12 +504,13 @@ void set_all_priority_and_recent_cpu(int64_t ticks){
     priority = calculate_priority(t->recent_cpu, t->nice);
     recent_cpu = calculate_recent_cpu(t->recent_cpu, t->nice);
     //check ticks for updates
-    if(ticks % timer_freq == 0){  //update recent_cpu and load average every second
-      update_load_avg();
+    if(check){  //update recent_cpu
       t->recent_cpu=recent_cpu;
     }
-    if(ticks % 4 == 0 && t!=idle_thread){ //update priority every 4 ticks
-      t->priority=priority;
+    else{ //update priority
+      if(t!=idle_thread){
+        t->priority=priority;
+      }
     }
   }
 }
