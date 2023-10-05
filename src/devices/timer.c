@@ -185,10 +185,10 @@ timer_interrupt (struct intr_frame *args UNUSED)
     increment_recent_cpu();
     if(ticks % TIMER_FREQ == 0){
       update_load_avg();
-      set_all_priority_and_recent_cpu(1); //update recent_cpu
+      set_recent_cpu_of_all_thread();
     }
     if(ticks % 4 == 0){
-      set_all_priority_and_recent_cpu(0); //update priority
+      set_priority_of_all_thread();
     }
   }
 

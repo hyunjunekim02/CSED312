@@ -485,7 +485,6 @@ update_load_avg(void){
   load_avg = fp_add(temp1, temp2);
 }
 
-/* increment recent cpu 1 */
 void
 increment_recent_cpu (void) {
   struct thread *current = thread_current();
@@ -494,31 +493,33 @@ increment_recent_cpu (void) {
   }
 }
 
-/* update every threads' priority and recent_cpu */
 void
-set_all_priority_and_recent_cpu(bool check){
-
+set_priority_of_all_thread (void) {
   struct list_elem *e;
   for (e = list_begin (&all_list); e != list_end (&all_list); e = list_next (e)) {
     struct thread *t = list_entry (e, struct thread, allelem);
-    //check ticks for updates
-    if(check){  //update recent_cpu
-      t->recent_cpu=calculate_recent_cpu(t->recent_cpu, t->nice);
-    }
-    else{ //update priority
-      if(t!=idle_thread){
-        t->priority=calculate_priority(t->recent_cpu, t->nice);
-      }
+    if (t != idle_thread) {
+      t->priority = calculate_priority(t->recent_cpu, t->nice);
     }
   }
 }
+
+void
+set_recent_cpu_of_all_thread (void) {
+  struct list_elem *e;
+  for (e = list_begin (&all_list); e != list_end (&all_list); e = list_next (e)) {
+    struct thread *t = list_entry (e, struct thread, allelem);
+    t->recent_cpu = calculate_recent_cpu(t->recent_cpu, t->nice);
+  }
+}
+
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) 
 { 
   /* Disable priority setting when mlfqs */
-  if(!thread_mlfqs){
+  if (!thread_mlfqs) {
     thread_current ()->original_priority = new_priority;
     update_current_thread_priority_with_donators();
     thread_preemption();
@@ -532,7 +533,6 @@ thread_get_priority (void)
   return thread_current ()->priority;
 }
 
-/* Sets the current thread's nice value to NICE. */
 void
 thread_set_nice (int nice UNUSED) 
 {
@@ -551,7 +551,6 @@ thread_set_nice (int nice UNUSED)
   intr_set_level(old_level);
 }
 
-/* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
 {
@@ -565,7 +564,6 @@ thread_get_nice (void)
   return return_nice;
 }
 
-/* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
 {
@@ -579,7 +577,6 @@ thread_get_load_avg (void)
   return return_load_avg;
 }
 
-/* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
