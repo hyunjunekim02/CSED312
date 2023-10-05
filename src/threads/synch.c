@@ -120,7 +120,6 @@ sema_up (struct semaphore *sema)
 
   sema->value++;
 
-  // preemption 안만들어서 오류 생겼었음
   thread_preemption ();
   intr_set_level (old_level);
 }
@@ -224,24 +223,21 @@ lock_acquire (struct lock *lock)
   struct thread *current_thread = thread_current();
   struct thread *lock_holder = lock->holder;
 
-  /* No priority donation when using mlfqs */
-  if (thread_mlfqs){
-    sema_down (&lock->semaphore);
-    lock->holder = current_thread;
-    return;
-  }
+  // if (thread_mlfqs) {
+  //   // is thread mlfqs
+  //   sema_down (&lock->semaphore);
+  //   lock->holder = current_thread;
+  //   return;
+  // }
 
-  if (lock_holder != NULL) {
+  if (lock_holder != NULL && !thread_mlfqs) {
     //if holder exist
     current_thread->wait_on_lock = lock;
-    //list_push_back(&lock_holder->donations, &current_thread->d_elem);
     list_insert_ordered(&lock_holder->donations, &current_thread->d_elem, set_donators_to_priority_descending, NULL);
     donate_priority(current_thread);
   }
 
   sema_down (&lock->semaphore);
-  // 혹시 여기서 current thread 바뀌나 ?????
-  // 뭐땜에 에러 안되던게 해결되는거지
   current_thread->wait_on_lock = NULL;
   lock->holder = current_thread;
 }
@@ -280,17 +276,13 @@ lock_release (struct lock *lock)
   struct thread *current_thread = thread_current();
   struct list_elem *e;
 
-  /* No priority donation when using mlfqs */
-  if (!thread_mlfqs){
-
-    //removing donator
+  if (!thread_mlfqs) {
     for (e = list_begin(&current_thread->donations); e != list_end(&current_thread->donations); e = list_next(e)) {
       struct thread *donator = list_entry(e, struct thread, d_elem);
       if (donator->wait_on_lock == lock){
         list_remove(&donator->d_elem);
       }
     }
-
     update_current_thread_priority_with_donators();
   }
 

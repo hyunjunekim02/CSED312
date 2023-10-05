@@ -106,7 +106,6 @@ struct thread
     /*for mlfqs (use 17.14 fixed point)*/
     int nice;
     fp_t recent_cpu;
-    //fp_t로 놓아야 하는가?
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */

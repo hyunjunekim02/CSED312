@@ -8,10 +8,10 @@ format:
 #include <stdint.h>
 #include "threads/thread.h"
 
-//floating point mecro
+// floating point mecro
 #define FP (1 << 14)
 
-//fp operation functions
+// fp operation functions
 fp_t fp_n_to_fp(int n);
 int fp_x_to_int_round_zero(fp_t x); //not used
 int fp_x_to_int_round_nearest(fp_t x);

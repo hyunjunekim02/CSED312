@@ -445,31 +445,33 @@ update_current_thread_priority_with_donators (void)
 */
 
 /* priority = PRI_MAX - (recent_cpu/4) - (nice * 2) */
-int calculate_priority(fp_t recent_cpu, int nice){
+int
+calculate_priority(fp_t recent_cpu, int nice){
   
-  //calculation
   int priority = fp_x_to_int_round_nearest(fp_add_x_and_n(fp_subtract_n_from_x(PRI_MAX, fp_add_x_and_n(fp_divide_x_by_n(recent_cpu, 4), nice * 2)), PRI_MAX));
 
-  //three possible cases
-  if(priority>PRI_MAX){
+  // three possible cases
+  if (priority > PRI_MAX) {
     return PRI_MAX;
   }
-  else if (priority<PRI_MIN){
+  else if (priority < PRI_MIN) {
     return PRI_MIN;
   }
-  else{
+  else {
     return priority;
   }
 }
 
 /* recent_cpu = decay * recent_cpu + nice, decay = (2*load_avg)/(2*load_avg+1) */
-fp_t calculate_recent_cpu(fp_t recent_cpu, int nice){
+fp_t
+calculate_recent_cpu(fp_t recent_cpu, int nice){
   fp_t decay = fp_divide_x_by_y(fp_multiply_x_by_n(load_avg, 2), fp_add_x_and_n(fp_multiply_x_by_n(load_avg, 2), 1));
   return fp_add_x_and_n(fp_multiply_x_by_y(decay, recent_cpu), nice);
 }
 
 /* load_avg = (59/60)*load_avg + (1/60)*ready_threads */
-void update_load_avg(void){
+void
+update_load_avg(void){
   int ready_threads = list_size(&ready_list);
 
   /* include running thread if not a idle */
@@ -484,32 +486,28 @@ void update_load_avg(void){
 }
 
 /* increment recent cpu 1 */
-void increment_recent_cpu(void){
+void
+increment_recent_cpu (void) {
   struct thread *current = thread_current();
   if (current != idle_thread){
-    current -> recent_cpu = fp_add_x_and_n(current->recent_cpu, 1);
+    current->recent_cpu = fp_add_x_and_n(current->recent_cpu, 1);
   }
 }
 
 /* update every threads' priority and recent_cpu */
-void set_all_priority_and_recent_cpu(bool check){
-  int priority;
-  fp_t recent_cpu;
-  int timer_freq = 100;
+void
+set_all_priority_and_recent_cpu(bool check){
 
-  /* traverse every threads */
   struct list_elem *e;
   for (e = list_begin (&all_list); e != list_end (&all_list); e = list_next (e)) {
     struct thread *t = list_entry (e, struct thread, allelem);
-    priority = calculate_priority(t->recent_cpu, t->nice);
-    recent_cpu = calculate_recent_cpu(t->recent_cpu, t->nice);
     //check ticks for updates
     if(check){  //update recent_cpu
-      t->recent_cpu=recent_cpu;
+      t->recent_cpu=calculate_recent_cpu(t->recent_cpu, t->nice);
     }
     else{ //update priority
       if(t!=idle_thread){
-        t->priority=priority;
+        t->priority=calculate_priority(t->recent_cpu, t->nice);
       }
     }
   }
@@ -520,20 +518,11 @@ void
 thread_set_priority (int new_priority) 
 { 
   /* Disable priority setting when mlfqs */
-  if (thread_mlfqs){
-    return;
+  if(!thread_mlfqs){
+    thread_current ()->original_priority = new_priority;
+    update_current_thread_priority_with_donators();
+    thread_preemption();
   }
-
-  thread_current ()->original_priority = new_priority;
-  //struct thread *current = thread_current ();
-  
-  // Case of priority donated
-  // if (list_empty(&current->donations) || new_priority > current->priority)
-  // {
-  //   current->priority = new_priority;
-  // }
-  update_current_thread_priority_with_donators();
-  thread_preemption();
 }
 
 /* Returns the current thread's priority. */
@@ -547,23 +536,18 @@ thread_get_priority (void)
 void
 thread_set_nice (int nice UNUSED) 
 {
-  /* interrupt disable needed */
   enum intr_level old_level;
   old_level = intr_disable();
 
-  /* Set nice of current thread */
   struct thread *t = thread_current();
   t->nice = nice;
 
-  /* set priority if it is not idle */
   if(t != idle_thread){
     t->priority = calculate_priority(t->recent_cpu, t->nice);
-    /* sort ready list and preempt */
     list_sort (&ready_list, set_list_to_priority_descending, NULL);
     thread_preemption();
   }
 
-  /* Restore interrupt level */
   intr_set_level(old_level);
 }
 
@@ -571,13 +555,11 @@ thread_set_nice (int nice UNUSED)
 int
 thread_get_nice (void) 
 {
-  /* interrupt disable needed */
   enum intr_level old_level;
   old_level = intr_disable();
 
   int return_nice = thread_current()->nice;
 
-  /* Restore interrupt level */
   intr_set_level(old_level);
 
   return return_nice;
@@ -587,13 +569,11 @@ thread_get_nice (void)
 int
 thread_get_load_avg (void) 
 {
-  /* interrupt disable needed */
   enum intr_level old_level;
   old_level = intr_disable();
 
   int return_load_avg = fp_x_to_int_round_nearest(fp_multiply_x_by_n(load_avg, 100));
 
-  /* Restore interrupt level */
   intr_set_level(old_level);
 
   return return_load_avg;
@@ -603,13 +583,11 @@ thread_get_load_avg (void)
 int
 thread_get_recent_cpu (void) 
 {
-  /* interrupt disable needed */
   enum intr_level old_level;
   old_level = intr_disable();
 
   int return_recent_cpu = fp_x_to_int_round_nearest(fp_multiply_x_by_n(thread_current()->recent_cpu, 100));
 
-  /* Restore interrupt level */
   intr_set_level(old_level);
 
   return return_recent_cpu;

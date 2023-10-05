@@ -175,7 +175,6 @@ timer_print_stats (void)
 }
 
 /* Timer interrupt handler. */
-// 모든 시간마다 wakeup되어야 하는 thread를 sleep_list에서 찾아주는 것 같다
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
