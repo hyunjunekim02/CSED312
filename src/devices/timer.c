@@ -182,17 +182,16 @@ timer_interrupt (struct intr_frame *args UNUSED)
   thread_tick ();
 
   if (thread_mlfqs) {
-    increment_recent_cpu();
+    increment_recent_cpu_on_every_tick ();
     if (ticks % TIMER_FREQ == 0) {
       update_load_avg();
-      set_recent_cpu_of_all_thread();
+      mlfqs_set_recent_cpu_of_all_thread ();
     }
     if (ticks % 4 == 0) {
-      set_priority_of_all_thread();
+      mlfqs_set_priority_of_all_thread ();
     }
   }
 
-  // Check the sleep list for threads to wake up
   thread_wakeup(ticks);
 }
 

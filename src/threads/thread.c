@@ -209,8 +209,6 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
-
-  // compare priorities and yield (preemption)
   thread_preemption();
 
   return tid;
@@ -338,8 +336,9 @@ thread_yield (void)
   intr_set_level (old_level);
 }
 
-// preemption function
-void thread_preemption(void){
+
+void
+thread_preemption (void) {
   if (list_empty(&ready_list)) {
     return;
   }
@@ -376,9 +375,7 @@ thread_sleep(int64_t time_to_wakeup)
   if (cur == idle_thread) {
     return;
   }
-  
   cur->wakeup_time = time_to_wakeup;
-  // update global tick if necessary - 필요한가?
   list_insert_ordered(&sleep_list, &cur->elem, less_wakeup_time, NULL);
   thread_block();
 
@@ -429,12 +426,12 @@ update_current_thread_priority_with_donators (void)
   struct thread *current_thread = thread_current ();
   int original_priority_of_current = current_thread->original_priority;
   
-  if (list_empty (&current_thread->donations)) {
+  if (list_empty (&current_thread->donators_list)) {
     current_thread->priority = original_priority_of_current;
     return;
   }
 
-  int biggest_priority_of_donator_list = list_entry (list_front(&current_thread->donations), struct thread, d_elem)->priority;
+  int biggest_priority_of_donator_list = list_entry (list_front(&current_thread->donators_list), struct thread, d_elem)->priority;
   original_priority_of_current = (biggest_priority_of_donator_list > original_priority_of_current) ? biggest_priority_of_donator_list : original_priority_of_current;  
 
   current_thread->priority = original_priority_of_current;
@@ -446,11 +443,10 @@ update_current_thread_priority_with_donators (void)
 
 /* priority = PRI_MAX - (recent_cpu/4) - (nice * 2) */
 int
-calculate_priority(fp_t recent_cpu, int nice)
+mlfqs_calculate_priority (fp_t recent_cpu, int nice)
 {
-  //int priority = fp_x_to_int_round_nearest(fp_add_x_and_n(fp_subtract_n_from_x(PRI_MAX, fp_add_x_and_n(fp_divide_x_by_n(recent_cpu, 4), nice * 2)), PRI_MAX));
   int priority = fp_x_to_int_round_zero(fp_add_x_and_n(fp_divide_x_by_n(recent_cpu, -4), PRI_MAX - nice * 2));
-  // three possible cases
+ 
   if (priority > PRI_MAX) {
     return PRI_MAX;
   }
@@ -464,14 +460,14 @@ calculate_priority(fp_t recent_cpu, int nice)
 
 /* recent_cpu = decay * recent_cpu + nice, decay = (2*load_avg)/(2*load_avg+1) */
 fp_t
-calculate_recent_cpu(fp_t recent_cpu, int nice){
+mlfqs_calculate_recent_cpu (fp_t recent_cpu, int nice) {
   fp_t decay = fp_divide_x_by_y(fp_multiply_x_by_n(load_avg, 2), fp_add_x_and_n(fp_multiply_x_by_n(load_avg, 2), 1));
   return fp_add_x_and_n(fp_multiply_x_by_y(decay, recent_cpu), nice);
 }
 
 /* load_avg = (59/60)*load_avg + (1/60)*ready_threads */
 void
-update_load_avg(void){
+update_load_avg (void) {
   int ready_threads = list_size(&ready_list);
 
   /* include running thread if not a idle */
@@ -486,30 +482,30 @@ update_load_avg(void){
 }
 
 void
-increment_recent_cpu (void) {
+increment_recent_cpu_on_every_tick (void) {
   struct thread *current = thread_current();
-  if (current != idle_thread){
+  if (current != idle_thread) {
     current->recent_cpu = fp_add_x_and_n(current->recent_cpu, 1);
   }
 }
 
 void
-set_priority_of_all_thread (void) {
+mlfqs_set_priority_of_all_thread (void) {
   struct list_elem *e;
   for (e = list_begin (&all_list); e != list_end (&all_list); e = list_next (e)) {
     struct thread *t = list_entry (e, struct thread, allelem);
     if (t != idle_thread) {
-      t->priority = calculate_priority(t->recent_cpu, t->nice);
+      t->priority = mlfqs_calculate_priority(t->recent_cpu, t->nice);// 추상화 레벨 맞춰서 리팩터링 하는게 좋긴한데 지금 고치기는 좀 귀찮다
     }
   }
 }
 
 void
-set_recent_cpu_of_all_thread (void) {
+mlfqs_set_recent_cpu_of_all_thread (void) {
   struct list_elem *e;
   for (e = list_begin (&all_list); e != list_end (&all_list); e = list_next (e)) {
     struct thread *t = list_entry (e, struct thread, allelem);
-    t->recent_cpu = calculate_recent_cpu(t->recent_cpu, t->nice);
+    t->recent_cpu = mlfqs_calculate_recent_cpu(t->recent_cpu, t->nice);
   }
 }
 
@@ -543,7 +539,7 @@ thread_set_nice (int nice UNUSED)
   t->nice = nice;
 
   if(t != idle_thread){
-    t->priority = calculate_priority(t->recent_cpu, t->nice);
+    t->priority = mlfqs_calculate_priority(t->recent_cpu, t->nice);
     list_sort (&ready_list, set_list_to_priority_descending, NULL);
     thread_preemption();
   }
@@ -683,7 +679,7 @@ init_thread (struct thread *t, const char *name, int priority)
   intr_set_level (old_level);
 
   /* Initailize thread's field for priority donation */
-  list_init (&t->donations);
+  list_init (&t->donators_list);
   t->wait_on_lock = NULL;
   t->original_priority = priority;
   //d_elem initialize 필요?

@@ -98,12 +98,12 @@ struct thread
     struct list_elem elem;              /* List element. */
 
     /* Priority donation */
-    struct list donations;    // donators_list가 더 나을듯 저것만 갖고는 list인지도 헷갈림
-    struct list_elem d_elem;  // contained data in donations list. not thread, but d_element
-    struct lock *wait_on_lock;   // The lock the thread is currently waiting to obtain
+    struct list donators_list;
+    struct list_elem d_elem;
+    struct lock *wait_on_lock;
     int original_priority;
 
-    /*for mlfqs (use 17.14 fixed point)*/
+    /* mlfqs variable */
     int nice;
     fp_t recent_cpu;
 
@@ -154,13 +154,13 @@ void thread_wakeup(const int64_t current_time);
 typedef void thread_action_func (struct thread *t, void *aux);
 void thread_foreach (thread_action_func *, void *);
 
-/* functions for mlfqs */
-int calculate_priority(fp_t recent_cpu, int nice);
-fp_t calculate_recent_cpu(fp_t recent_cpu, int nice);
-void update_load_avg(void);
-void increment_recent_cpu(void);
-void set_priority_of_all_thread (void);
-void set_recent_cpu_of_all_thread (void);
+// My mlfqs functions
+int mlfqs_calculate_priority (fp_t recent_cpu, int nice);
+fp_t mlfqs_calculate_recent_cpu (fp_t recent_cpu, int nice);
+void update_load_avg (void);
+void increment_recent_cpu_on_every_tick (void);
+void mlfqs_set_priority_of_all_thread (void);
+void mlfqs_set_recent_cpu_of_all_thread (void);
 
 int thread_get_priority (void);
 void thread_set_priority (int);
