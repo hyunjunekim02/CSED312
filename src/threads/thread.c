@@ -372,7 +372,7 @@ thread_sleep(int64_t time_to_wakeup)
   
   ASSERT (!intr_context ());
 
-  old_level = intr_disable (); // 인터럽트 비활성화 (thread list 수정하기 전에 비활성화 해줘야함)
+  old_level = intr_disable ();
   if (cur == idle_thread) {
     return;
   }
@@ -382,7 +382,7 @@ thread_sleep(int64_t time_to_wakeup)
   list_insert_ordered(&sleep_list, &cur->elem, less_wakeup_time, NULL);
   thread_block();
 
-  intr_set_level(old_level);  // 인터럽트 레벨 복원
+  intr_set_level(old_level);
 }
 
 
