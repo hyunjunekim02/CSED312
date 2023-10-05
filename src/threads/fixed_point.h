@@ -33,11 +33,11 @@ int fp_x_to_int_round_zero(fp_t x){
 }
 
 int fp_x_to_int_round_nearest(fp_t x){
-    if(x >= 0){
-        return (x+FP/2)/FP;
+    if (x >= 0) {
+        return (x + FP / 2) / FP;
     }
-    else{
-        return (x-FP/2)/FP;
+    else {
+        return (x - FP / 2) / FP;
     }
 }
 
@@ -58,7 +58,7 @@ fp_t fp_subtract_n_from_x(int n, fp_t x){
 }
 
 fp_t fp_multiply_x_by_y(fp_t x, fp_t y){
-    return ((int64_t)x) * y / FP;
+    return ((int64_t) x) * y / FP;
 }   //x should be int64_t
 
 fp_t fp_multiply_x_by_n(fp_t x, int n){
@@ -66,7 +66,7 @@ fp_t fp_multiply_x_by_n(fp_t x, int n){
 }
 
 fp_t fp_divide_x_by_y(fp_t x, fp_t y){
-    return ((int64_t)x) * FP / y;
+    return ((int64_t) x) * FP / y;
 }   //x should be int64_t
 
 fp_t fp_divide_x_by_n(fp_t x, int n){

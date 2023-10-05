@@ -446,10 +446,10 @@ update_current_thread_priority_with_donators (void)
 
 /* priority = PRI_MAX - (recent_cpu/4) - (nice * 2) */
 int
-calculate_priority(fp_t recent_cpu, int nice){
-  
-  int priority = fp_x_to_int_round_nearest(fp_add_x_and_n(fp_subtract_n_from_x(PRI_MAX, fp_add_x_and_n(fp_divide_x_by_n(recent_cpu, 4), nice * 2)), PRI_MAX));
-
+calculate_priority(fp_t recent_cpu, int nice)
+{
+  //int priority = fp_x_to_int_round_nearest(fp_add_x_and_n(fp_subtract_n_from_x(PRI_MAX, fp_add_x_and_n(fp_divide_x_by_n(recent_cpu, 4), nice * 2)), PRI_MAX));
+  int priority = fp_x_to_int_round_zero(fp_add_x_and_n(fp_divide_x_by_n(recent_cpu, -4), PRI_MAX - nice * 2));
   // three possible cases
   if (priority > PRI_MAX) {
     return PRI_MAX;
@@ -547,7 +547,7 @@ thread_set_nice (int nice UNUSED)
     list_sort (&ready_list, set_list_to_priority_descending, NULL);
     thread_preemption();
   }
-
+ 
   intr_set_level(old_level);
 }
 
