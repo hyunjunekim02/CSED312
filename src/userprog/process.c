@@ -29,7 +29,8 @@ tid_t
 process_execute (const char *file_name) 
 {
   char *fn_copy;
-  char *program_name, *temp;
+  char *program_name;
+  char *save_ptr;
   tid_t tid;
 
   /* Make a copy of FILE_NAME.
@@ -44,19 +45,19 @@ process_execute (const char *file_name)
   if (program_name == NULL)
     return TID_ERROR;
   strlcpy (program_name, file_name, PGSIZE);
-  program_name = strtok_r (program_name, " ", &temp);
+  program_name = strtok_r (program_name, " ", &save_ptr);
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (program_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR){
     palloc_free_page (fn_copy);
   }
-  // else{
-  //   sema_down (&(thread_current()->sema_wait_for_load));
-  // }
+  else{
+    // Parent-child load waiting
+    sema_down (&(get_child_thread(tid)->pcb->sema_wait_for_load));
+  }
 
-  // palloc_free_page (fn_copy); //이거 해줘야 하나?
-  palloc_free_page (program_name);
+  palloc_free_page(program_name);
   return tid;
 }
 
@@ -76,13 +77,24 @@ start_process (void *file_name_)
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (file_name, &if_.eip, &if_.esp);
 
+  /* For Parent-child relationship */
+  sema_up(&(thread_current()->sema_wait_for_load));
+
   /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success) 
     thread_exit ();
+    //syscall_exit으로 수정?
 
-  // /* For Parent-child relationship */
-  // sema_up(&(thread_current()->parent_process->sema_wait_for_load));
+  /* argument setting part */
+  char **argv = palloc_get_page(0);
+  int argc = argument_parsing (file_name, argv);
+  init_set_stack_arg (argv, argc, &if_.esp);
+  palloc_free_page (argv);
+
+  //argument_stack(parse, count, &if_.esp);
+  hex_dump(if_.esp, if_.esp, PHYS_BASE - if_.esp, true);
+
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -112,7 +124,7 @@ process_wait (tid_t child_tid UNUSED)
   // struct list_elem *elem;
 
   // //child_list 순회해서 child_tid에 해당하는 process 찾기
-  // for (elem = list_begin(&cur->child_list); e != list_end(&cur->child_list); elem = list_next(elem)){
+  // for (elem = list_begin(&cur->child_list); elem != list_end(&cur->child_list); elem = list_next(elem)){
   //   child = list_entry(elem, struct thread, child_list_elem);
   //   if (child->tid == child_tid){
   //     break;
@@ -123,12 +135,12 @@ process_wait (tid_t child_tid UNUSED)
   // }
 
   // /* Parent-Child relationship */
-  // sema_down (&(thread_current()->sema_wait_for_exit));
+  // //sema_down (&(thread_current()->sema_wait_for_exit));
 
   // /* exit from child */
   // exit_code = child->exit_code;
   // list_remove (&(child->child_list_elem));
-  // palloc_free_page (child);
+  // palloc_free_page (child); //Memory lick 방지?
 
   // return exit_code;
   return -1;
@@ -141,8 +153,8 @@ process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
 
-  // /* parent-child relationship */
-  // sema_up (&(cur->parent_process->sema_wait_for_exit));
+  /* parent-child relationship */
+  //sema_up (&(cur->parent_process->sema_wait_for_exit));
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
@@ -177,6 +189,70 @@ process_activate (void)
      interrupts. */
   tss_update ();
 }
+
+/* parse cmd into argv with number of token argc */
+int
+argument_parsing(char *cmd_line, char **argv)
+{
+  int argc = 0;
+  char *save_ptr;
+  char *token = strtok_r(cmd_line, " ", &save_ptr);
+
+  /* Parsing */
+  while (token != NULL) {
+    argv[argc++] = token;
+    token = strtok_r(NULL, " ", &save_ptr);
+  }
+  return argc;
+}
+
+/* initial stack argument setting */
+void
+init_set_stack_arg(char **argv, int argc, void **esp)
+{
+  int i, length;
+  char *arg;
+  uintptr_t stack_ptr;
+
+  /* Copy arguments into stack */ //
+  for (i = argc - 1; i >= 0; i--) {
+    arg = argv[i];
+    length = strlen(arg);
+    *esp -= length + 1;
+    strlcpy(*esp, arg, length + 1);
+    argv[i] = *esp;
+  }
+
+  /* Stack alignment */
+  uint32_t esp_val = (uint32_t)(*esp);
+  if (esp_val % 4) {
+    *esp = (void *)(esp_val - (esp_val % 4));
+  }
+
+  /* NULL pointer */
+  *esp -= sizeof(char *);
+  **(uint32_t **)esp = 0;
+
+  /* argv[i] push */
+  for (i = argc - 1; i >= 0; i--) {
+    *esp -= sizeof(char *);
+    **(uint32_t **)esp = argv[i];
+  }
+
+  /* argv push */
+  stack_ptr = (uint32_t)(*esp);
+  *esp -= sizeof(char **);
+  **(uint32_t **)esp = stack_ptr;
+
+  /* argc push */
+  *esp -= sizeof(int);
+  **(uint32_t **)esp = argc;
+
+  /* return part */
+  *esp -= sizeof(int);
+  **(uint32_t **)esp = 0;
+}
+
 
 /* We load ELF binaries.  The following definitions are taken
    from the ELF specification, [ELF1], more-or-less verbatim.  */
