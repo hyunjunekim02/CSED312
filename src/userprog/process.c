@@ -29,6 +29,7 @@ tid_t
 process_execute (const char *file_name) 
 {
   char *fn_copy;
+  char *program_name, *temp;
   tid_t tid;
 
   /* Make a copy of FILE_NAME.
@@ -38,10 +39,24 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
+  /* File name parsing part */
+  program_name = palloc_get_page (0);
+  if (program_name == NULL)
+    return TID_ERROR;
+  strlcpy (program_name, file_name, PGSIZE);
+  program_name = strtok_r (program_name, " ", &temp);
+
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
-  if (tid == TID_ERROR)
-    palloc_free_page (fn_copy); 
+  tid = thread_create (program_name, PRI_DEFAULT, start_process, fn_copy);
+  if (tid == TID_ERROR){
+    palloc_free_page (fn_copy);
+  }
+  // else{
+  //   sema_down (&(thread_current()->sema_wait_for_load));
+  // }
+
+  // palloc_free_page (fn_copy); //이거 해줘야 하나?
+  palloc_free_page (program_name);
   return tid;
 }
 
@@ -66,6 +81,9 @@ start_process (void *file_name_)
   if (!success) 
     thread_exit ();
 
+  // /* For Parent-child relationship */
+  // sema_up(&(thread_current()->parent_process->sema_wait_for_load));
+
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
@@ -88,6 +106,31 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
+  // struct thread *child;
+  // struct thread *cur = thread_current();
+  // int exit_code;
+  // struct list_elem *elem;
+
+  // //child_list 순회해서 child_tid에 해당하는 process 찾기
+  // for (elem = list_begin(&cur->child_list); e != list_end(&cur->child_list); elem = list_next(elem)){
+  //   child = list_entry(elem, struct thread, child_list_elem);
+  //   if (child->tid == child_tid){
+  //     break;
+  //   }
+  // }
+  // if(child->tid != child_tid){
+  //   return -1;
+  // }
+
+  // /* Parent-Child relationship */
+  // sema_down (&(thread_current()->sema_wait_for_exit));
+
+  // /* exit from child */
+  // exit_code = child->exit_code;
+  // list_remove (&(child->child_list_elem));
+  // palloc_free_page (child);
+
+  // return exit_code;
   return -1;
 }
 
@@ -97,6 +140,9 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
+
+  // /* parent-child relationship */
+  // sema_up (&(cur->parent_process->sema_wait_for_exit));
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */

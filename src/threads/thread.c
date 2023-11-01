@@ -207,6 +207,13 @@ thread_create (const char *name, int priority,
   sf->eip = switch_entry;
   sf->ebp = 0;
 
+  /* Parent-child relationship initialization */
+  t->parent_process = thread_current();
+  // sema_init(&(t->sema_wait_for_exit), 0);
+  // sema_init(&(t->sema_wait_for_exit), 0);
+  list_push_back (&(t->parent_process->child_list), &(t->child_list_elem));
+  t->exit_code = -1;
+
   /* Add to run queue. */
   thread_unblock (t);
   thread_preemption();
@@ -682,7 +689,6 @@ init_thread (struct thread *t, const char *name, int priority)
   list_init (&t->donators_list);
   t->wait_on_lock = NULL;
   t->original_priority = priority;
-  //d_elem initialize 필요?
 
   /* Initialize mlfqs */
   t->recent_cpu = 0;
