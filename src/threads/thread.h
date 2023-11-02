@@ -4,8 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
-#include "threads/fixed_point.h"
-#include "synch.h"
+// #include "threads/fixed_point.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -28,14 +27,6 @@ typedef int fp_t;
 #define PRI_MIN 0                       /* Lowest priority. */
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
-
-// struct PCB{
-//    int exit_code;
-//    bool is_exited;
-//    bool is_loaded;
-//    struct semaphore sema_wait;
-//    struct semaphore sema_load;
-// }
 
 /* A kernel thread or user process.
 
@@ -119,13 +110,6 @@ struct thread
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
-
-   //  /* for parent-child relationship */
-   //  struct PCB pcb;
-   //  struct thread *parent_process;
-   //  struct list list_child_process;
-   //  struct list_elem elem_child_process;
-
 #endif
 
     /* Owned by thread.c. */

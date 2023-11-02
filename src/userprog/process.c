@@ -28,23 +28,18 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
 tid_t
 process_execute (const char *file_name) 
 {
-  char *fn_copy;
-  char *program_name;
-  char *save_ptr;
+  char *fn_copy, *program_name, *save_ptr;
   tid_t tid;
 
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
-  if (fn_copy == NULL)
-    return TID_ERROR;
-  strlcpy (fn_copy, file_name, PGSIZE);
-
-  /* File name parsing part */
   program_name = palloc_get_page (0);
-  if (program_name == NULL)
+  if (fn_copy == NULL || program_name == NULL){
     return TID_ERROR;
-  strlcpy (program_name, file_name, PGSIZE);
+  }
+  strlcpy (fn_copy, file_name, PGSIZE);
+  strlcpy (program_name, file_name, strlen(file_name) + 1);
   program_name = strtok_r (program_name, " ", &save_ptr);
 
   /* Create a new thread to execute FILE_NAME. */
@@ -52,12 +47,9 @@ process_execute (const char *file_name)
   if (tid == TID_ERROR){
     palloc_free_page (fn_copy);
   }
-  else{
-    // Parent-child load waiting
-    sema_down (&(get_child_thread(tid)->pcb->sema_wait_for_load));
-  }
 
-  palloc_free_page(program_name);
+  /* memory free */
+  palloc_free_page (program_name);
   return tid;
 }
 
@@ -75,26 +67,23 @@ start_process (void *file_name_)
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  success = load (file_name, &if_.eip, &if_.esp);
+  // success = load (file_name, &if_.eip, &if_.esp);
 
-  /* For Parent-child relationship */
-  sema_up(&(thread_current()->sema_wait_for_load));
+  /* Pars arguments. */
+  char **argv = palloc_get_page(0);
+  int argc = parse_arguments(file_name, argv);
+  success = load (argv[0], &if_.eip, &if_.esp);
+  if (success)
+    init_stack_arg (argv, argc, &if_.esp);
+  palloc_free_page (argv);
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
-  if (!success) 
+  if (!success)
     thread_exit ();
-    //syscall_exit으로 수정?
 
-  /* argument setting part */
-  char **argv = palloc_get_page(0);
-  int argc = argument_parsing (file_name, argv);
-  init_set_stack_arg (argv, argc, &if_.esp);
-  palloc_free_page (argv);
-
-  //argument_stack(parse, count, &if_.esp);
-  hex_dump(if_.esp, if_.esp, PHYS_BASE - if_.esp, true);
-
+  //Debugging - argument passing debug purpose
+  hex_dump(if_.esp , if_.esp , PHYS_BASE - if_.esp , true);
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -116,33 +105,10 @@ start_process (void *file_name_)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid UNUSED) 
+process_wait (tid_t child_tid) 
 {
-  // struct thread *child;
-  // struct thread *cur = thread_current();
-  // int exit_code;
-  // struct list_elem *elem;
-
-  // //child_list 순회해서 child_tid에 해당하는 process 찾기
-  // for (elem = list_begin(&cur->child_list); elem != list_end(&cur->child_list); elem = list_next(elem)){
-  //   child = list_entry(elem, struct thread, child_list_elem);
-  //   if (child->tid == child_tid){
-  //     break;
-  //   }
-  // }
-  // if(child->tid != child_tid){
-  //   return -1;
-  // }
-
-  // /* Parent-Child relationship */
-  // //sema_down (&(thread_current()->sema_wait_for_exit));
-
-  // /* exit from child */
-  // exit_code = child->exit_code;
-  // list_remove (&(child->child_list_elem));
-  // palloc_free_page (child); //Memory lick 방지?
-
-  // return exit_code;
+  int i;
+  for (i = 0; i < 1000000000; i++); // 임시방편 waiting loop
   return -1;
 }
 
@@ -152,9 +118,6 @@ process_exit (void)
 {
   struct thread *cur = thread_current ();
   uint32_t *pd;
-
-  /* parent-child relationship */
-  //sema_up (&(cur->parent_process->sema_wait_for_exit));
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
@@ -190,67 +153,61 @@ process_activate (void)
   tss_update ();
 }
 
-/* parse cmd into argv with number of token argc */
 int
-argument_parsing(char *cmd_line, char **argv)
+parse_arguments (char *cmd, char **argv)
 {
-  int argc = 0;
-  char *save_ptr;
-  char *token = strtok_r(cmd_line, " ", &save_ptr);
+  char *token, *save_ptr;
 
-  /* Parsing */
-  while (token != NULL) {
-    argv[argc++] = token;
-    token = strtok_r(NULL, " ", &save_ptr);
+  int argc = 0;
+
+  for (token = strtok_r (cmd, " ", &save_ptr); token != NULL;
+  token = strtok_r (NULL, " ", &save_ptr), argc++)
+  {
+    argv[argc] = token;
   }
+
   return argc;
 }
 
-/* initial stack argument setting */
 void
-init_set_stack_arg(char **argv, int argc, void **esp)
+init_stack_arg (char **argv, int argc, void **esp)
 {
-  int i, length;
-  char *arg;
-  uintptr_t stack_ptr;
-
-  /* Copy arguments into stack */ //
-  for (i = argc - 1; i >= 0; i--) {
-    arg = argv[i];
-    length = strlen(arg);
-    *esp -= length + 1;
-    strlcpy(*esp, arg, length + 1);
+  /* Push ARGV strings and calculate total length */
+  int total_len = 0;
+  for (int i = argc - 1; i >= 0; i--) {
+    int len = strlen(argv[i]) + 1;
+    *esp -= len;
+    total_len += len;
+    strlcpy(*esp, argv[i], len);
     argv[i] = *esp;
   }
 
-  /* Stack alignment */
-  uint32_t esp_val = (uint32_t)(*esp);
-  if (esp_val % 4) {
-    *esp = (void *)(esp_val - (esp_val % 4));
+  /* Align stack */
+  if (total_len % 4) {
+    *esp = (char *)*esp - (4 - (total_len % 4));
   }
 
-  /* NULL pointer */
-  *esp -= sizeof(char *);
-  **(uint32_t **)esp = 0;
+  /* Push NULL separator */
+  *esp -= 4;
+  *(void **)*esp = NULL;
 
-  /* argv[i] push */
-  for (i = argc - 1; i >= 0; i--) {
-    *esp -= sizeof(char *);
-    **(uint32_t **)esp = argv[i];
+  /* Push addresses of ARGV[i] */
+  for (int i = argc - 1; i >= 0; i--) {
+    *esp -= 4;
+    *(char **)*esp = argv[i];
   }
 
-  /* argv push */
-  stack_ptr = (uint32_t)(*esp);
-  *esp -= sizeof(char **);
-  **(uint32_t **)esp = stack_ptr;
+  /* Push address of ARGV */
+  *esp -= 4;
+  *(char ***)*esp = (char **)(*esp + 4);
 
-  /* argc push */
-  *esp -= sizeof(int);
-  **(uint32_t **)esp = argc;
+  /* Push ARGC */
+  *esp -= 4;
+  *(int *)*esp = argc;
 
-  /* return part */
-  *esp -= sizeof(int);
-  **(uint32_t **)esp = 0;
+  /* Push fake return address */
+  *esp -= 4;
+  *(uintptr_t *)*esp = 0;
 }
 
 
@@ -437,6 +394,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   file_close (file);
   return success;
 }
+
 
 /* load() helpers. */
 
