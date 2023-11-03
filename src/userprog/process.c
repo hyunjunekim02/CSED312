@@ -61,20 +61,26 @@ start_process (void *file_name_)
   char *file_name = file_name_;
   struct intr_frame if_;
   bool success;
+  char *token, save_ptr;
+  int argc = 0;
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
-  // success = load (file_name, &if_.eip, &if_.esp);
 
-  /* Pars arguments. */
+  /* Argument Parsing */
   char **argv = palloc_get_page(0);
-  int argc = parse_arguments(file_name, argv);
+  for (token = strtok_r (file_name, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr)){
+    argv[argc] = token;
+    argc++;
+  }
+
+  /* Push arguments into the stack */
   success = load (argv[0], &if_.eip, &if_.esp);
   if (success)
-    init_stack_arg (argv, argc, &if_.esp);
+    set_stack_arguments (argv, argc, &if_.esp);
   palloc_free_page (argv);
 
   /* If load failed, quit. */
@@ -153,24 +159,9 @@ process_activate (void)
   tss_update ();
 }
 
-int
-parse_arguments (char *cmd, char **argv)
-{
-  char *token, *save_ptr;
-
-  int argc = 0;
-
-  for (token = strtok_r (cmd, " ", &save_ptr); token != NULL;
-  token = strtok_r (NULL, " ", &save_ptr), argc++)
-  {
-    argv[argc] = token;
-  }
-
-  return argc;
-}
-
+/* argument stack setting function */
 void
-init_stack_arg (char **argv, int argc, void **esp)
+set_stack_arguments (char **argv, int argc, void **esp)
 {
   /* Push ARGV strings and calculate total length */
   int total_len = 0;
@@ -182,22 +173,22 @@ init_stack_arg (char **argv, int argc, void **esp)
     argv[i] = *esp;
   }
 
-  /* Align stack */
+  /* Stack alignment */
   if (total_len % 4) {
     *esp = (char *)*esp - (4 - (total_len % 4));
   }
 
-  /* Push NULL separator */
+  /* Push NULL */
   *esp -= 4;
   *(void **)*esp = NULL;
 
-  /* Push addresses of ARGV[i] */
+  /* Push ARGV[i] address */
   for (int i = argc - 1; i >= 0; i--) {
     *esp -= 4;
     *(char **)*esp = argv[i];
   }
 
-  /* Push address of ARGV */
+  /* Push ARGV */
   *esp -= 4;
   *(char ***)*esp = (char **)(*esp + 4);
 
@@ -205,7 +196,7 @@ init_stack_arg (char **argv, int argc, void **esp)
   *esp -= 4;
   *(int *)*esp = argc;
 
-  /* Push fake return address */
+  /* Push return address (fake) */
   *esp -= 4;
   *(uintptr_t *)*esp = 0;
 }

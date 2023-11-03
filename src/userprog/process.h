@@ -8,7 +8,7 @@ int process_wait (tid_t);
 void process_exit (void);
 void process_activate (void);
 
-int parse_arguments(char *cmd_line, char **argv);
-void init_stack_arg (char **argv, int argc, void **esp);
+/* argument stack setting function */
+void set_stack_arguments (char **argv, int argc, void **esp);
 
 #endif /* userprog/process.h */
