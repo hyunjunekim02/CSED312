@@ -4,7 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
-// #include "threads/fixed_point.h"
+#include "synch.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -110,6 +110,16 @@ struct thread
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
+
+    /* for parent-child relationship */
+    struct semaphore sema_wait_for_load;
+    struct semaphore sema_wait_for_exit;
+    struct thread *parent_process;
+    struct list child_process_list;
+    struct list_elem child_process_elem;
+    bool child_exited;
+    bool child_loaded;
+    int exit_code;
 #endif
 
     /* Owned by thread.c. */
@@ -174,5 +184,8 @@ int thread_get_load_avg (void);
 bool less_wakeup_time (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 bool set_list_to_priority_descending (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
 void update_current_thread_priority_with_donators(void);
+
+/* for parent-child relationship */
+struct thread *get_child_thread (tid_t tid);
 
 #endif /* threads/thread.h */

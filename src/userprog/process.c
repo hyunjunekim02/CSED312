@@ -47,6 +47,10 @@ process_execute (const char *file_name)
   if (tid == TID_ERROR){
     palloc_free_page (fn_copy);
   }
+  /* Parent-child: wait until load */
+  else{
+    sema_down (&(get_child_thread(tid)->sema_wait_for_load));
+  }
 
   /* memory free */
   palloc_free_page (program_name);
@@ -79,9 +83,13 @@ start_process (void *file_name_)
 
   /* Push arguments into the stack */
   success = load (argv[0], &if_.eip, &if_.esp);
-  if (success)
+  if (success){
     set_stack_arguments (argv, argc, &if_.esp);
+  }
   palloc_free_page (argv);
+
+  /* parent-child: after load, signal */
+  sema_up (&(thread_current()->sema_wait_for_load));
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
@@ -113,9 +121,27 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid) 
 {
-  int i;
-  for (i = 0; i < 1000000000; i++); // 임시방편 waiting loop
-  return -1;
+  // int i;
+  // for (i = 0; i < 1000000000; i++); // 임시방편 waiting loop
+  // return -1;
+
+  struct thread *child = get_child_thread(child_tid);
+  int exit_code;
+
+  /* return -1 cases*/
+  if(child == NULL | child->child_loaded == false){
+    return -1;
+  }
+
+  /* wait for child's exit */
+  sema_down(&(child->sema_wait_for_exit));
+  exit_code = child->exit_code;
+
+  /* memory free of the child process */
+  list_remove (&(child->child_process_elem));
+  palloc_free_page (child);
+
+  return exit_code;
 }
 
 /* Free the current process's resources. */
@@ -141,6 +167,9 @@ process_exit (void)
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
+  /* signal of child exited */
+  cur->child_exited = true;
+  sema_up (&(cur->sema_wait_for_exit));
 }
 
 /* Sets up the CPU for running user code in the current
@@ -379,6 +408,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   *eip = (void (*) (void)) ehdr.e_entry;
 
   success = true;
+  t->child_loaded = true;
 
  done:
   /* We arrive here whether the load is successful or not. */

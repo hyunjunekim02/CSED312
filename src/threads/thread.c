@@ -207,6 +207,15 @@ thread_create (const char *name, int priority,
   sf->eip = switch_entry;
   sf->ebp = 0;
 
+  /* Parent-child relationship setting */
+  sema_init (&(t->sema_wait_for_load), 0);
+  sema_init (&(t->sema_wait_for_exit), 0);
+  t->parent_process = thread_current();
+  list_push_back(&(t->parent_process->child_process_list), &(t->child_process_elem));
+  t->child_exited = false;
+  t->child_loaded = false;
+  t->exit_code = -1;
+
   /* Add to run queue. */
   thread_unblock (t);
   thread_preemption();
@@ -685,6 +694,9 @@ init_thread (struct thread *t, const char *name, int priority)
   /* Initialize mlfqs */
   t->recent_cpu = 0;
   t->nice = 0;
+
+  /* parent-child list */
+  list_init (&(t->child_process_list));
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -800,3 +812,18 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+/* for parent-child purpose */
+struct thread *get_child_thread (tid_t tid){
+  struct thread *cur = thread_current();
+  struct list *list_child = &(cur->child_process_list);
+  struct list_elem *elem;
+
+  for (elem = list_begin(list_child); elem != list_end(list_child); elem = list_next(elem)){
+    struct thread *child_thread = list_entry(elem, struct thread, child_process_elem)->tid;
+    if(child_thread->tid == tid){
+      return child_thread;
+    }
+  }
+  return NULL;
+}
