@@ -21,15 +21,20 @@ pid_t exec (const char *cmd_line);
 int wait (pid_t pid);
 
 /* File Manipulation */
-// bool create (const char *file, unsigned initial_size);
-// bool remove (const char *file);
-// int open (const char *file);
-// int filesize (int fd);
-// int read (int fd, void *buffer, unsigned size);
-// int write (int fd, const void *buffer, unsigned size);
-// void seek (int fd, unsigned position);
-// unsigned tell (int fd);
-// void close (int fd);
+bool create (const char *file, unsigned initial_size);
+bool remove (const char *file);
+int open (const char *file);
+int filesize (int fd);
+int read (int fd, void *buffer, unsigned size);
+int write (int fd, const void *buffer, unsigned size);
+void seek (int fd, unsigned position);
+unsigned tell (int fd);
+void close (int fd);
+
+/* Helper function for file add */
+int process_add_file (struct file *f);
+struct *file process_get_file(int fd);
+void process_close_file(int fd);
 
 void
 syscall_init (void) 
@@ -119,33 +124,33 @@ syscall_handler (struct intr_frame *f UNUSED)
     copy_argument_to_kernel(f->esp, arg, 1);
     f->eax = wait((int)f->ebx);
     break;
-  // case SYS_CREATE:
-  //   f->eax = create((const char *)f->ebx, (unsigned)f->ecx);
-  //   break;
-  // case SYS_REMOVE:
-  //   f->eax = remove((const char *)f->ebx); 
-  //   break;
-  // case SYS_OPEN:
-  //   f->eax = open((const char *)f->ebx);
-  //   break;
-  // case SYS_FILESIZE:
-  //   f->eax = filesize((int)f->ebx);
-  //   break;
-  // case SYS_READ:
-  //   f->eax = read((int)f->ebx, (void *)f->ecx, (unsigned)f->edx);
-  //   break;
-  // case SYS_WRITE:
-  //   f->eax = write((int)f->ebx, (const void *)f->ecx, (unsigned)f->edx);
-  //   break;
-  // case SYS_SEEK:
-  //   seek((int)f->ebx, (unsigned)f->ecx);
-  //   break;
-  // case SYS_TELL:
-  //   f->eax = tell((int)f->ebx);
-  //   break;
-  // case SYS_CLOSE:
-  //   close((int)f->ebx);
-  //   break;
+  case SYS_CREATE:
+    f->eax = create((const char *)f->ebx, (unsigned)f->ecx);
+    break;
+  case SYS_REMOVE:
+    f->eax = remove((const char *)f->ebx); 
+    break;
+  case SYS_OPEN:
+    f->eax = open((const char *)f->ebx);
+    break;
+  case SYS_FILESIZE:
+    f->eax = filesize((int)f->ebx);
+    break;
+  case SYS_READ:
+    f->eax = read((int)f->ebx, (void *)f->ecx, (unsigned)f->edx);
+    break;
+  case SYS_WRITE:
+    f->eax = write((int)f->ebx, (const void *)f->ecx, (unsigned)f->edx);
+    break;
+  case SYS_SEEK:
+    seek((int)f->ebx, (unsigned)f->ecx);
+    break;
+  case SYS_TELL:
+    f->eax = tell((int)f->ebx);
+    break;
+  case SYS_CLOSE:
+    close((int)f->ebx);
+    break;
   default:
     // printf("Unknown system call: %d\n", vec_no);
     break;
@@ -171,4 +176,123 @@ pid_t exec (const char *cmd_line) {
 
 int wait (pid_t pid) {
   return process_wait(pid);
+}
+
+bool create (const char *file, unsigned initial_size) {
+  if (file == NULL) {
+    exit(-1);
+  }
+  return filesys_create(file, initial_size);
+}
+
+bool remove (const char *file) {
+  if (file == NULL) {
+    exit(-1);
+  }
+  return filesys_remove(file);
+}
+
+int open (const char *file) {
+  if (file == NULL) {
+    exit(-1);
+  }
+  struct file *f = filesys_open(file);
+  if (f == NULL) {
+    return -1;
+  }
+  return process_add_file(f);
+}
+
+int filesize (int fd) {
+  struct file *f = process_get_file(fd);
+  if (f == NULL) {
+    return -1;
+  }
+  return file_length(f);
+}
+
+int read (int fd, void *buffer, unsigned size) {
+  if (buffer == NULL) {
+    exit(-1);
+  }
+  if (fd == 0) {
+    unsigned i;
+    uint8_t *local_buffer = (uint8_t *)buffer;
+    for (i = 0; i < size; i++) {
+      local_buffer[i] = input_getc();
+    }
+    return size;
+  }
+  struct file *f = process_get_file(fd);
+  if (f == NULL) {
+    return -1;
+  }
+  return file_read(f, buffer, size);
+}
+
+int write (int fd, const void *buffer, unsigned size) {
+  if (buffer == NULL) {
+    exit(-1);
+  }
+  if (fd == 1) {
+    putbuf(buffer, size);
+    return size;
+  }
+  struct file *f = process_get_file(fd);
+  if (f == NULL) {
+    return -1;
+  }
+  return file_write(f, buffer, size);
+}
+
+void seek (int fd, unsigned position) {
+  struct file *f = process_get_file(fd);
+  if (f == NULL) {
+    return;
+  }
+  file_seek(f, position);
+}
+
+unsigned tell (int fd) {
+  struct file *f = process_get_file(fd);
+  if (f == NULL) {
+    return -1;
+  }
+  return file_tell(f);
+}
+
+void close (int fd) {
+  process_close_file(fd);
+}
+
+
+int process_add_file (struct file *f) {
+  struct thread *cur = thread_current();
+  cur->pcb->fdt[cur->pcb->next_fd] = f;
+  cur->pcb->next_fd++;
+  // return cur->pcb->next_fd - 1;
+  return cur->pcb->next_fd;
+}
+
+struct *file process_get_file(int fd) {
+  struct thread *cur = thread_current();
+  if (fd < 2 || fd >= cur->pcb->next_fd) {
+    return NULL;
+  }
+  return cur->pcb->fdt[fd];
+}
+
+void process_close_file(int fd) {
+  struct thread *cur = thread_current();
+  int index = fd;
+  if (fd < 2 || fd >= cur->pcb->next_fd) {
+    return;
+  }
+  file_close(cur->pcb->fdt[fd]);
+  cur->pcb->fdt[fd] = NULL;
+  do{
+    cur->fdt[index] = cur->fdt[index + 1];
+    index++;
+  }while(cur->fdt[index] != NULL);
+  cur->pcb->next_fd--;
 }
