@@ -8,6 +8,8 @@
 #include "devices/shutdown.h"
 #include "userprog/process.h"
 #include "filesys/filesys.h"
+#include "filesys/file.h"
+#include "devices/input.h"
 
 typedef int pid_t;
 
@@ -47,6 +49,8 @@ syscall_init (void)
 static void
 check_valid_address (void *addr)
 {
+  //debugging
+  // hex_dump(addr, addr, 150, 1);
   if (!is_user_vaddr(addr)) //page_fault에 is_kernel_vaddr 옮기기
   {
     exit(-1);
@@ -104,6 +108,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       check_valid_address(f->esp + 20);
       check_valid_address(f->esp + 24);
       check_valid_address(f->esp + 28);
+      //hex_dump((uint32_t *)(f->esp+20), (uint32_t *)(f->esp+20), 150, 1);
       f->eax = write((int)*(uint32_t *)(f->esp+20), (void *)*(uint32_t *)(f->esp + 24), (unsigned)*((uint32_t *)(f->esp + 28)));
       break;
     case SYS_SEEK:
@@ -134,6 +139,9 @@ void halt (void) {
 void exit (int status) {
   struct thread *cur = thread_current();
   cur->pcb->exit_code = status;
+  // if (!cur->pcb->child_loaded){
+  //   sema_up (&(cur->pcb->sema_wait_for_load));
+  // }
   printf("%s: exit(%d)\n", thread_current()->name, status);
   thread_exit();
 }

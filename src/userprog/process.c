@@ -122,8 +122,8 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid) 
 {
-  // printf("");
-  for(int i=0; i<1000000; i++);
+  printf("");
+  for (int i=0; i<1000000000; i++);
 
   struct thread *child = get_child_thread(child_tid);
   int exit_code;
