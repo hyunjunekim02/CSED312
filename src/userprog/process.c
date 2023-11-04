@@ -42,6 +42,8 @@ process_execute (const char *file_name)
   strlcpy (program_name, file_name, strlen(file_name) + 1);
   program_name = strtok_r (program_name, " ", &save_ptr);
 
+  printf("\n\n===========01 process_execute===========\n");
+
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (program_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR){
@@ -49,11 +51,12 @@ process_execute (const char *file_name)
   }
   /* Parent-child: wait until load */
   else{
-    sema_down (&(get_child_thread(tid)->sema_wait_for_load));
+    sema_down (&(get_child_thread(tid)->pcb->sema_wait_for_load));
   }
 
   /* memory free */
   palloc_free_page (program_name);
+  printf("===========01-1 process_execute finished ===========");
   return tid;
 }
 
@@ -89,15 +92,19 @@ start_process (void *file_name_)
   palloc_free_page (argv);
 
   /* parent-child: after load, signal */
-  sema_up (&(thread_current()->sema_wait_for_load));
+  sema_up (&(thread_current()->pcb->sema_wait_for_load));
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
-  if (!success)
+  if (!success){
     thread_exit ();
+  }
+    
+
+  printf("\n\n===========04 start_process===========\n");
 
   //Debugging - argument passing debug purpose
-  hex_dump(if_.esp , if_.esp , PHYS_BASE - if_.esp , true);
+  hex_dump(if_.esp , if_.esp , 100 , true);
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -121,24 +128,25 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid) 
 {
-  // int i;
-  // for (i = 0; i < 1000000000; i++); // 임시방편 waiting loop
-  // return -1;
+  printf("\n\n===========05 process_wait===========\n");
+
+  //thread_current()->pcb->is_waiting_for_child = true;
 
   struct thread *child = get_child_thread(child_tid);
   int exit_code;
 
   /* return -1 cases*/
-  if(child == NULL | child->child_loaded == false){
+  if (child == NULL || child->pcb->child_loaded == false) {
     return -1;
   }
 
   /* wait for child's exit */
-  sema_down(&(child->sema_wait_for_exit));
-  exit_code = child->exit_code;
+  sema_down(&(child->pcb->sema_wait_for_exit));
+  exit_code = child->pcb->exit_code;
 
   /* memory free of the child process */
   list_remove (&(child->child_process_elem));
+  palloc_free_page (child->pcb);
   palloc_free_page (child);
 
   return exit_code;
@@ -168,8 +176,10 @@ process_exit (void)
       pagedir_destroy (pd);
     }
   /* signal of child exited */
-  cur->child_exited = true;
-  sema_up (&(cur->sema_wait_for_exit));
+  sema_up (&(cur->pcb->sema_wait_for_exit));
+  // if(cur->parent_process->pcb->is_waiting_for_child == true){
+  //   sema_up (&(cur->pcb->sema_wait_for_exit));
+  // }
 }
 
 /* Sets up the CPU for running user code in the current
@@ -408,7 +418,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   *eip = (void (*) (void)) ehdr.e_entry;
 
   success = true;
-  t->child_loaded = true;
+  t->pcb->child_loaded = true;
 
  done:
   /* We arrive here whether the load is successful or not. */

@@ -28,6 +28,16 @@ typedef int fp_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
+/* Kernel access block for parent-child relationship */
+struct PCB
+{
+   struct semaphore sema_wait_for_load;
+   struct semaphore sema_wait_for_exit;
+   bool child_loaded;
+   int exit_code;
+   bool is_waiting_for_child;
+};
+
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -112,14 +122,10 @@ struct thread
     uint32_t *pagedir;                  /* Page directory. */
 
     /* for parent-child relationship */
-    struct semaphore sema_wait_for_load;
-    struct semaphore sema_wait_for_exit;
     struct thread *parent_process;
     struct list child_process_list;
     struct list_elem child_process_elem;
-    bool child_exited;
-    bool child_loaded;
-    int exit_code;
+    struct PCB *pcb;
 #endif
 
     /* Owned by thread.c. */

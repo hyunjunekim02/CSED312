@@ -207,14 +207,21 @@ thread_create (const char *name, int priority,
   sf->eip = switch_entry;
   sf->ebp = 0;
 
+  /* page for pcb block */
+  t->pcb = palloc_get_page(0);
+  if(t->pcb == NULL){
+    return TID_ERROR;
+  }
+
   /* Parent-child relationship setting */
-  sema_init (&(t->sema_wait_for_load), 0);
-  sema_init (&(t->sema_wait_for_exit), 0);
+  sema_init (&(t->pcb->sema_wait_for_load), 0);
+  sema_init (&(t->pcb->sema_wait_for_exit), 0);
+  t->pcb->exit_code = -1;
+  t->pcb->child_loaded = false;
+  t->pcb->is_waiting_for_child = false;
   t->parent_process = thread_current();
+  printf("\n\n===========02 thread_create===========\n");
   list_push_back(&(t->parent_process->child_process_list), &(t->child_process_elem));
-  t->child_exited = false;
-  t->child_loaded = false;
-  t->exit_code = -1;
 
   /* Add to run queue. */
   thread_unblock (t);
@@ -318,6 +325,7 @@ thread_exit (void)
   /* Remove thread from all threads list, set our status to dying,
      and schedule another process.  That process will destroy us
      when it calls thread_schedule_tail(). */
+  printf("\n\n==========07 thread exit=========\n");
   intr_disable ();
   list_remove (&thread_current()->allelem);
   thread_current ()->status = THREAD_DYING;
@@ -768,6 +776,10 @@ thread_schedule_tail (struct thread *prev)
   if (prev != NULL && prev->status == THREAD_DYING && prev != initial_thread) 
     {
       ASSERT (prev != cur);
+      printf("\n\n============08 dying ===========\n");
+      list_remove (&(prev->child_process_elem));
+      get_child_thread(prev->tid);
+      palloc_free_page (prev->pcb);
       palloc_free_page (prev);
     }
 }
@@ -814,13 +826,16 @@ allocate_tid (void)
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
 /* for parent-child purpose */
-struct thread *get_child_thread (tid_t tid){
+struct thread *get_child_thread (tid_t tid)
+{
   struct thread *cur = thread_current();
-  struct list *list_child = &(cur->child_process_list);
+  struct list *child_list = &(cur->child_process_list);
   struct list_elem *elem;
 
-  for (elem = list_begin(list_child); elem != list_end(list_child); elem = list_next(elem)){
-    struct thread *child_thread = list_entry(elem, struct thread, child_process_elem)->tid;
+  printf("\n\n===========03 get_child_thread===========\n");
+
+  for (elem = list_begin(child_list); elem != list_end(child_list); elem = list_next(elem)) {
+    struct thread *child_thread = list_entry(elem, struct thread, child_process_elem);
     if(child_thread->tid == tid){
       return child_thread;
     }
