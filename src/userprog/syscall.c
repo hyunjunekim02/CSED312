@@ -71,13 +71,14 @@ put_user (uint8_t *udst, uint8_t byte)
 static void
 check_valid_address (void *addr)
 {
-  // if (!is_user_vaddr(addr) || addr > (void *)0x08048000)
-  if (!is_user_vaddr(addr))
+  // if (!is_user_vaddr(addr) || addr < (void *)0x08048000)
+  if (!is_user_vaddr(addr) || addr < (void *)0x08048000)
   {
-    if(is_user_vaddr(addr)){printf("\n\nis_user_vaddr??\n\n");}
-    printf("\n============99 exit here?==========\n");
     exit(-1);
   }
+  // if (get_user(addr) == -1) {
+  //   exit(-1);
+  // }
 }
 
 static void
@@ -87,25 +88,20 @@ copy_argument_to_kernel (void *esp, int *arg, int count)
   int i;
   for (i = 0; i < count; i++)
   {
-    if (get_user(esp + i * 4 + 20) == -1)
+    if (get_user(esp + i * 4) == -1)
     {
       exit(-1);
     }
-    check_valid_address(esp + i * 4 + 20);
-    arg[i] = *(int *)(esp + i * 4 + 20);
+    check_valid_address(esp + i * 4);
+    arg[i] = *(int *)(esp + i * 4);
   }
 }
 
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
-  printf("system call!\n");
-  printf("syscall num : %d\n", *(uint32_t *)(f->esp));
-
   check_valid_address(f->esp);
   // check_valid_address((void *)f->eax);
-  
-  printf("\n\nnot exited from check valid address \n\n");
 
   int arg[3];
   // uint32_t vec_no = f->vec_no;
@@ -142,8 +138,9 @@ syscall_handler (struct intr_frame *f UNUSED)
       f->eax = open((const char *)arg[0]);
       break;
     case SYS_FILESIZE:
-      copy_argument_to_kernel(f->esp + 4, arg, 1);
-      f->eax = filesize(arg[0]);
+      // copy_argument_to_kernel(f->esp + 4, arg, 1);
+      // f->eax = filesize(arg[0]);
+      f->eax = write((int)*(uint32_t *)(f->esp+20), (void *)*(uint32_t *)(f->esp + 24), (unsigned)*((uint32_t *)(f->esp + 28)));
       break;
     case SYS_READ:
       copy_argument_to_kernel(f->esp + 4, arg, 3);
@@ -152,7 +149,6 @@ syscall_handler (struct intr_frame *f UNUSED)
     case SYS_WRITE:
       copy_argument_to_kernel(f->esp + 4, arg, 3);
       f->eax = write(arg[0], (const void *)arg[1], (unsigned)arg[2]);
-      // f->eax = write((int)*(uint32_t *)(f->esp+20), (void *)*(uint32_t *)(f->esp + 24), (unsigned)*((uint32_t *)(f->esp + 28)));
       break;
     case SYS_SEEK:
       copy_argument_to_kernel(f->esp + 4, arg, 2);
@@ -177,7 +173,6 @@ void halt (void) {
 }
 
 void exit (int status) {
-  printf("\n\n==========06 system call exit called===========\n");
   struct thread *cur = thread_current();
   cur->pcb->exit_code = status;
   printf("%s: exit(%d)\n", thread_current()->name, status);
@@ -246,20 +241,16 @@ int read (int fd, void *buffer, unsigned size) {
 
 int write (int fd, const void *buffer, unsigned size) {
   if (buffer == NULL) {
-    printf("\n======99 write system call: exit==========\n");
     exit(-1);
   }
   if (fd == 1) {
-    printf("\n======98 write system call: fd=1==========\n");
     putbuf(buffer, size);
     return size;
   }
   struct file *f = process_get_file(fd);
   if (f == NULL) {
-    printf("\n======97 write system call: file null==========\n");
     return -1;
   }
-  printf("\n======10 call file_write==========\n");
   return file_write(f, buffer, size);
 }
 

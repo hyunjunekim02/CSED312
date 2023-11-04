@@ -230,7 +230,6 @@ thread_create (const char *name, int priority,
   t->pcb->exit_code = -1;
   t->pcb->child_loaded = false;
   t->parent_process = thread_current();
-  printf("\n\n===========02 thread_create===========\n");
   list_push_back(&(t->parent_process->child_process_list), &(t->child_process_elem));
 
   /* Add to run queue. */
@@ -335,7 +334,6 @@ thread_exit (void)
   /* Remove thread from all threads list, set our status to dying,
      and schedule another process.  That process will destroy us
      when it calls thread_schedule_tail(). */
-  printf("\n\n==========07 thread exit=========\n");
   intr_disable ();
   list_remove (&thread_current()->allelem);
   thread_current ()->status = THREAD_DYING;
@@ -786,7 +784,6 @@ thread_schedule_tail (struct thread *prev)
   if (prev != NULL && prev->status == THREAD_DYING && prev != initial_thread) 
     {
       ASSERT (prev != cur);
-      printf("\n\n============08 dying ===========\n");
       list_remove (&(prev->child_process_elem));
       get_child_thread(prev->tid);
       palloc_free_page (prev->pcb);
@@ -841,8 +838,6 @@ struct thread *get_child_thread (tid_t tid)
   struct thread *cur = thread_current();
   struct list *child_list = &(cur->child_process_list);
   struct list_elem *elem;
-
-  printf("\n\n===========03 get_child_thread===========\n");
 
   for (elem = list_begin(child_list); elem != list_end(child_list); elem = list_next(elem)) {
     struct thread *child_thread = list_entry(elem, struct thread, child_process_elem);

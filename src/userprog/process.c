@@ -42,8 +42,6 @@ process_execute (const char *file_name)
   strlcpy (program_name, file_name, strlen(file_name) + 1);
   program_name = strtok_r (program_name, " ", &save_ptr);
 
-  printf("\n\n===========01 process_execute===========\n");
-
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (program_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR){
@@ -56,7 +54,6 @@ process_execute (const char *file_name)
 
   /* memory free */
   palloc_free_page (program_name);
-  printf("===========01-1 process_execute finished ===========");
   return tid;
 }
 
@@ -99,12 +96,9 @@ start_process (void *file_name_)
   if (!success){
     thread_exit ();
   }
-    
-
-  printf("\n\n===========04 start_process===========\n");
 
   //Debugging - argument passing debug purpose
-  hex_dump(if_.esp , if_.esp , 100 , true);
+  //hex_dump(if_.esp , if_.esp , 100 , true);
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -128,7 +122,7 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid) 
 {
-  printf("\n\n===========05 process_wait===========\n");
+  //printf("");
 
   struct thread *child = get_child_thread(child_tid);
   int exit_code;
