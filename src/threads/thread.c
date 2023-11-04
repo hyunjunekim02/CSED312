@@ -218,7 +218,6 @@ thread_create (const char *name, int priority,
   sema_init (&(t->pcb->sema_wait_for_exit), 0);
   t->pcb->exit_code = -1;
   t->pcb->child_loaded = false;
-  t->pcb->is_waiting_for_child = false;
   t->parent_process = thread_current();
   printf("\n\n===========02 thread_create===========\n");
   list_push_back(&(t->parent_process->child_process_list), &(t->child_process_elem));

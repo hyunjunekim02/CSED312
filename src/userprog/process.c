@@ -130,8 +130,6 @@ process_wait (tid_t child_tid)
 {
   printf("\n\n===========05 process_wait===========\n");
 
-  //thread_current()->pcb->is_waiting_for_child = true;
-
   struct thread *child = get_child_thread(child_tid);
   int exit_code;
 
@@ -177,9 +175,6 @@ process_exit (void)
     }
   /* signal of child exited */
   sema_up (&(cur->pcb->sema_wait_for_exit));
-  // if(cur->parent_process->pcb->is_waiting_for_child == true){
-  //   sema_up (&(cur->pcb->sema_wait_for_exit));
-  // }
 }
 
 /* Sets up the CPU for running user code in the current
