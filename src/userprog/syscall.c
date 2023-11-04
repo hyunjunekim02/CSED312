@@ -130,31 +130,40 @@ syscall_handler (struct intr_frame *f UNUSED)
     f->eax = wait((int)f->ebx);
     break;
   case SYS_CREATE:
+    copy_argument_to_kernel(f->esp, arg, 2);
     f->eax = create((const char *)f->ebx, (unsigned)f->ecx);
     break;
   case SYS_REMOVE:
+    copy_argument_to_kernel(f->esp, arg, 1);
     f->eax = remove((const char *)f->ebx); 
     break;
   case SYS_OPEN:
+    copy_argument_to_kernel(f->esp, arg, 1);
     f->eax = open((const char *)f->ebx);
     break;
   case SYS_FILESIZE:
+    copy_argument_to_kernel(f->esp, arg, 1);
     f->eax = filesize((int)f->ebx);
     break;
   case SYS_READ:
+    copy_argument_to_kernel(f->esp, arg, 3);
     f->eax = read((int)f->ebx, (void *)f->ecx, (unsigned)f->edx);
     break;
   case SYS_WRITE:
+    copy_argument_to_kernel(f->esp, arg, 3);
     printf("\n======write system call==========\n");
     f->eax = write((int)f->ebx, (const void *)f->ecx, (unsigned)f->edx);
     break;
   case SYS_SEEK:
+    copy_argument_to_kernel(f->esp, arg, 2);
     seek((int)f->ebx, (unsigned)f->ecx);
     break;
   case SYS_TELL:
+    copy_argument_to_kernel(f->esp, arg, 1);
     f->eax = tell((int)f->ebx);
     break;
   case SYS_CLOSE:
+    copy_argument_to_kernel(f->esp, arg, 1);
     close((int)f->ebx);
     break;
   default:
