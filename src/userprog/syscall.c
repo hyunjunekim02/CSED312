@@ -83,17 +83,16 @@ check_valid_address (void *addr)
 static void
 copy_argument_to_kernel (void *esp, int *arg, int count)
 {
+  // check and use get_user
   int i;
   for (i = 0; i < count; i++)
   {
-    check_valid_address(esp);
-    int result = get_user((uint8_t *)esp);
-    if (result == -1)
+    if (get_user(esp + i * 4) == -1)
     {
       exit(-1);
     }
-    arg[i] = result;
-    esp += 4;
+    check_valid_address(esp + i * 4);
+    arg[i] = *(int *)(esp + i * 4);
   }
 }
 
@@ -111,66 +110,65 @@ syscall_handler (struct intr_frame *f UNUSED)
   int arg[3];
   // uint32_t vec_no = f->vec_no;
   uint32_t vec_no = *(uint32_t *)(f->esp);
+  
 
   switch (vec_no)
   {
-  case SYS_HALT:
-    halt();
-    break;
-  case SYS_EXIT:
-    copy_argument_to_kernel(f->esp, arg, 1);
-    exit((int)f->ebx);
-    break;
-  case SYS_EXEC:
-    copy_argument_to_kernel(f->esp, arg, 1);
-    f->eax = exec((const char *)f->ebx);
-    break;
-  case SYS_WAIT:
-    copy_argument_to_kernel(f->esp, arg, 1);
-    f->eax = wait((int)f->ebx);
-    break;
-  case SYS_CREATE:
-    copy_argument_to_kernel(f->esp, arg, 2);
-    f->eax = create((const char *)f->ebx, (unsigned)f->ecx);
-    break;
-  case SYS_REMOVE:
-    copy_argument_to_kernel(f->esp, arg, 1);
-    f->eax = remove((const char *)f->ebx); 
-    break;
-  case SYS_OPEN:
-    copy_argument_to_kernel(f->esp, arg, 1);
-    f->eax = open((const char *)f->ebx);
-    break;
-  case SYS_FILESIZE:
-    copy_argument_to_kernel(f->esp, arg, 1);
-    f->eax = filesize((int)f->ebx);
-    break;
-  case SYS_READ:
-    copy_argument_to_kernel(f->esp, arg, 3);
-    f->eax = read((int)f->ebx, (void *)f->ecx, (unsigned)f->edx);
-    break;
-  case SYS_WRITE:
-    copy_argument_to_kernel(f->esp, arg, 3);
-    printf("\n======write system call==========\n");
-    f->eax = write((int)f->ebx, (const void *)f->ecx, (unsigned)f->edx);
-    break;
-  case SYS_SEEK:
-    copy_argument_to_kernel(f->esp, arg, 2);
-    seek((int)f->ebx, (unsigned)f->ecx);
-    break;
-  case SYS_TELL:
-    copy_argument_to_kernel(f->esp, arg, 1);
-    f->eax = tell((int)f->ebx);
-    break;
-  case SYS_CLOSE:
-    copy_argument_to_kernel(f->esp, arg, 1);
-    close((int)f->ebx);
-    break;
-  default:
-    // printf("Unknown system call: %d\n", vec_no);
-    break;
+    case SYS_HALT:
+      halt();
+      break;
+    case SYS_EXIT:
+      copy_argument_to_kernel(f->esp + 4, arg, 1);
+      exit(arg[0]);
+      break;
+    case SYS_EXEC:
+      copy_argument_to_kernel(f->esp + 4, arg, 1);
+      f->eax = exec((const char *)arg[0]);
+      break;
+    case SYS_WAIT:
+      copy_argument_to_kernel(f->esp + 4, arg, 1);
+      f->eax = wait((pid_t)arg[0]);
+      break;
+    case SYS_CREATE:
+      copy_argument_to_kernel(f->esp + 4, arg, 2);
+      f->eax = create((const char *)arg[0], (unsigned)arg[1]);
+      break;
+    case SYS_REMOVE:
+      copy_argument_to_kernel(f->esp + 4, arg, 1);
+      f->eax = remove((const char *)arg[0]);
+      break;
+    case SYS_OPEN:
+      copy_argument_to_kernel(f->esp + 4, arg, 1);
+      f->eax = open((const char *)arg[0]);
+      break;
+    case SYS_FILESIZE:
+      copy_argument_to_kernel(f->esp + 4, arg, 1);
+      f->eax = filesize(arg[0]);
+      break;
+    case SYS_READ:
+      copy_argument_to_kernel(f->esp + 4, arg, 3);
+      f->eax = read(arg[0], (void *)arg[1], (unsigned)arg[2]);
+      break;
+    case SYS_WRITE:
+      copy_argument_to_kernel(f->esp + 4, arg, 3);
+      f->eax = write(arg[0], (const void *)arg[1], (unsigned)arg[2]);
+      break;
+    case SYS_SEEK:
+      copy_argument_to_kernel(f->esp + 4, arg, 2);
+      seek(arg[0], (unsigned)arg[1]);
+      break;
+    case SYS_TELL:
+      copy_argument_to_kernel(f->esp + 4, arg, 1);
+      f->eax = tell(arg[0]);
+      break;
+    case SYS_CLOSE:
+      copy_argument_to_kernel(f->esp + 4, arg, 1);
+      close(arg[0]);
+      break;
+    default:
+      printf("default\n");
+      break;
   }
-  thread_exit ();
 }
 
 void halt (void) {
