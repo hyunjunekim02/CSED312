@@ -87,12 +87,12 @@ copy_argument_to_kernel (void *esp, int *arg, int count)
   int i;
   for (i = 0; i < count; i++)
   {
-    if (get_user(esp + i * 4) == -1)
+    if (get_user(esp + i * 4 + 20) == -1)
     {
       exit(-1);
     }
-    check_valid_address(esp + i * 4);
-    arg[i] = *(int *)(esp + i * 4);
+    check_valid_address(esp + i * 4 + 20);
+    arg[i] = *(int *)(esp + i * 4 + 20);
   }
 }
 
@@ -152,6 +152,7 @@ syscall_handler (struct intr_frame *f UNUSED)
     case SYS_WRITE:
       copy_argument_to_kernel(f->esp + 4, arg, 3);
       f->eax = write(arg[0], (const void *)arg[1], (unsigned)arg[2]);
+      // f->eax = write((int)*(uint32_t *)(f->esp+20), (void *)*(uint32_t *)(f->esp + 24), (unsigned)*((uint32_t *)(f->esp + 28)));
       break;
     case SYS_SEEK:
       copy_argument_to_kernel(f->esp + 4, arg, 2);
