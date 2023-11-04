@@ -8,10 +8,10 @@
 #include "devices/shutdown.h"
 #include "userprog/process.h"
 #include "filesys/filesys.h"
-// #include "filesys/file.h"
 
 typedef int pid_t;
 
+/* System Call Handler */
 static void syscall_handler (struct intr_frame *);
 
 /* System Calls */
@@ -36,131 +36,88 @@ int process_add_file (struct file *f);
 struct file *process_get_file(int fd);
 void process_close_file(int fd);
 
+/* Init function for syscall handler */
 void
 syscall_init (void) 
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
-/* Reads a byte at user virtual address UADDR.
-   UADDR must be below PHYS_BASE.
-   Returns the byte value if successful, -1 if a segfault
-   occurred. */
-static int
-get_user (const uint8_t *uaddr)
-{
-  int result;
-  asm ("movl $1f, %0; movzbl %1, %0; 1:"
-       : "=&a" (result) : "m" (*uaddr));
-  return result;
-}
-
-/* Writes BYTE to user address UDST.
-   UDST must be below PHYS_BASE.
-   Returns true if successful, false if a segfault occurred. */
-static bool
-put_user (uint8_t *udst, uint8_t byte)
-{
-  int error_code;
-  asm ("movl $1f, %0; movb %b2, %1; 1:"
-       : "=&a" (error_code), "=m" (*udst) : "q" (byte));
-  return error_code != -1;
-}
-
-
+/* valid address checking */
 static void
 check_valid_address (void *addr)
 {
-  // if (!is_user_vaddr(addr) || addr < (void *)0x08048000)
-  if (!is_user_vaddr(addr) || addr < (void *)0x08048000)
+  if (!is_user_vaddr(addr)) //page_fault에 is_kernel_vaddr 옮기기
   {
     exit(-1);
   }
-  // if (get_user(addr) == -1) {
-  //   exit(-1);
-  // }
 }
 
-static void
-copy_argument_to_kernel (void *esp, int *arg, int count)
-{
-  // check and use get_user
-  int i;
-  for (i = 0; i < count; i++)
-  {
-    if (get_user(esp + i * 4) == -1)
-    {
-      exit(-1);
-    }
-    check_valid_address(esp + i * 4);
-    arg[i] = *(int *)(esp + i * 4);
-  }
-}
-
+/* System call handler */
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
-  check_valid_address(f->esp);
-  // check_valid_address((void *)f->eax);
-
   int arg[3];
-  // uint32_t vec_no = f->vec_no;
   uint32_t vec_no = *(uint32_t *)(f->esp);
-  
 
-  switch (vec_no)
-  {
+  /* each system call cases */
+  switch (vec_no){
     case SYS_HALT:
       halt();
       break;
     case SYS_EXIT:
-      copy_argument_to_kernel(f->esp + 4, arg, 1);
-      exit(arg[0]);
+      check_valid_address(f->esp + 4);
+      exit(*(uint32_t *)(f->esp + 4));
       break;
     case SYS_EXEC:
-      copy_argument_to_kernel(f->esp + 4, arg, 1);
-      f->eax = exec((const char *)arg[0]);
+      check_valid_address(f->esp + 4);
+      f->eax = exec((const char *)*(uint32_t *)(f->esp + 4));
       break;
     case SYS_WAIT:
-      copy_argument_to_kernel(f->esp + 4, arg, 1);
-      f->eax = wait((pid_t)arg[0]);
+      check_valid_address(f->esp + 4);
+      f->eax = wait((pid_t)*(uint32_t *)(f->esp + 4));
       break;
     case SYS_CREATE:
-      copy_argument_to_kernel(f->esp + 4, arg, 2);
-      f->eax = create((const char *)arg[0], (unsigned)arg[1]);
+      check_valid_address(f->esp + 16);
+      check_valid_address(f->esp + 20);
+      f->eax = create((const char *)*(uint32_t *)(f->esp + 16), (unsigned)*(uint32_t *)(f->esp + 20));
       break;
     case SYS_REMOVE:
-      copy_argument_to_kernel(f->esp + 4, arg, 1);
-      f->eax = remove((const char *)arg[0]);
+      check_valid_address(f->esp + 4);
+      f->eax = remove((const char*)*(uint32_t *)(f->esp + 4));
       break;
     case SYS_OPEN:
-      copy_argument_to_kernel(f->esp + 4, arg, 1);
-      f->eax = open((const char *)arg[0]);
+      check_valid_address(f->esp + 4);
+      f->eax = open((const char*)*(uint32_t *)(f->esp + 4));
       break;
     case SYS_FILESIZE:
-      // copy_argument_to_kernel(f->esp + 4, arg, 1);
-      // f->eax = filesize(arg[0]);
-      f->eax = write((int)*(uint32_t *)(f->esp+20), (void *)*(uint32_t *)(f->esp + 24), (unsigned)*((uint32_t *)(f->esp + 28)));
+      check_valid_address(f->esp + 4);
+      f->eax = filesize((int)*(uint32_t *)(f->esp + 4));
       break;
     case SYS_READ:
-      copy_argument_to_kernel(f->esp + 4, arg, 3);
-      f->eax = read(arg[0], (void *)arg[1], (unsigned)arg[2]);
+      check_valid_address(f->esp + 20);
+      check_valid_address(f->esp + 24);
+      check_valid_address(f->esp + 28);
+      f->eax = read((int)*(uint32_t *)(f->esp+20), (void *)*(uint32_t *)(f->esp + 24), (unsigned)*((uint32_t *)(f->esp + 28)));
       break;
     case SYS_WRITE:
-      copy_argument_to_kernel(f->esp + 4, arg, 3);
-      f->eax = write(arg[0], (const void *)arg[1], (unsigned)arg[2]);
+      check_valid_address(f->esp + 20);
+      check_valid_address(f->esp + 24);
+      check_valid_address(f->esp + 28);
+      f->eax = write((int)*(uint32_t *)(f->esp+20), (void *)*(uint32_t *)(f->esp + 24), (unsigned)*((uint32_t *)(f->esp + 28)));
       break;
     case SYS_SEEK:
-      copy_argument_to_kernel(f->esp + 4, arg, 2);
-      seek(arg[0], (unsigned)arg[1]);
+      check_valid_address(f->esp + 16);
+      check_valid_address(f->esp + 20);
+      seek((int)*(uint32_t *)(f->esp + 16), (unsigned)*(uint32_t *)(f->esp + 20));
       break;
     case SYS_TELL:
-      copy_argument_to_kernel(f->esp + 4, arg, 1);
-      f->eax = tell(arg[0]);
+      check_valid_address(f->esp + 4);
+      f->eax = tell((int)*(uint32_t *)(f->esp + 4));
       break;
     case SYS_CLOSE:
-      copy_argument_to_kernel(f->esp + 4, arg, 1);
-      close(arg[0]);
+      check_valid_address(f->esp + 4);
+      close((int)*(uint32_t *)(f->esp + 4));
       break;
     default:
       printf("default\n");
@@ -168,10 +125,12 @@ syscall_handler (struct intr_frame *f UNUSED)
   }
 }
 
+/* halt system call */
 void halt (void) {
   shutdown_power_off();
 }
 
+/* exit system call */
 void exit (int status) {
   struct thread *cur = thread_current();
   cur->pcb->exit_code = status;
@@ -179,32 +138,40 @@ void exit (int status) {
   thread_exit();
 }
 
+/* exec system call */
 pid_t exec (const char *cmd_line) {
   return process_execute(cmd_line);
 }
 
+/* wait system call */
 int wait (pid_t pid) {
   return process_wait(pid);
 }
 
+/* file create system call */
 bool create (const char *file, unsigned initial_size) {
   if (file == NULL) {
     exit(-1);
   }
+  check_valid_address(file);
   return filesys_create(file, initial_size);
 }
 
+/* file remove system call */
 bool remove (const char *file) {
   if (file == NULL) {
     exit(-1);
   }
+  check_valid_address(file);
   return filesys_remove(file);
 }
 
+/* file open system call */
 int open (const char *file) {
   if (file == NULL) {
     exit(-1);
   }
+  check_valid_address(file);
   struct file *f = filesys_open(file);
   if (f == NULL) {
     return -1;
@@ -212,6 +179,7 @@ int open (const char *file) {
   return process_add_file(f);
 }
 
+/* filesize system call */
 int filesize (int fd) {
   struct file *f = process_get_file(fd);
   if (f == NULL) {
@@ -220,10 +188,12 @@ int filesize (int fd) {
   return file_length(f);
 }
 
+/* file read system call */
 int read (int fd, void *buffer, unsigned size) {
   if (buffer == NULL) {
     exit(-1);
   }
+  check_valid_address(buffer);
   if (fd == 0) {
     unsigned i;
     uint8_t *local_buffer = (uint8_t *)buffer;
@@ -239,10 +209,12 @@ int read (int fd, void *buffer, unsigned size) {
   return file_read(f, buffer, size);
 }
 
+/* file write system call */
 int write (int fd, const void *buffer, unsigned size) {
   if (buffer == NULL) {
     exit(-1);
   }
+  check_valid_address(buffer);
   if (fd == 1) {
     putbuf(buffer, size);
     return size;
@@ -254,6 +226,7 @@ int write (int fd, const void *buffer, unsigned size) {
   return file_write(f, buffer, size);
 }
 
+/* file seek system call */
 void seek (int fd, unsigned position) {
   struct file *f = process_get_file(fd);
   if (f == NULL) {
@@ -262,6 +235,7 @@ void seek (int fd, unsigned position) {
   file_seek(f, position);
 }
 
+/* file tell system call */
 unsigned tell (int fd) {
   struct file *f = process_get_file(fd);
   if (f == NULL) {
@@ -270,10 +244,10 @@ unsigned tell (int fd) {
   return file_tell(f);
 }
 
+/* file close system call */
 void close (int fd) {
   process_close_file(fd);
 }
-
 
 int process_add_file (struct file *f) {
   struct thread *cur = thread_current();
@@ -293,15 +267,19 @@ struct file *process_get_file(int fd) {
 
 void process_close_file(int fd) {
   struct thread *cur = thread_current();
+  struct file *f = cur->pcb->fdt[fd];
   int index = fd;
   if (fd < 2 || fd >= cur->pcb->next_fd) {
     return;
   }
-  file_close(cur->pcb->fdt[fd]);
+  if(f == NULL){
+    exit(-1);
+  }
+  file_close(f);
   cur->pcb->fdt[fd] = NULL;
   do{
     cur->pcb->fdt[index] = cur->pcb->fdt[index + 1];
-    index++;
+    index ++;
   }while(cur->pcb->fdt[index] != NULL);
   cur->pcb->next_fd--;
 }
