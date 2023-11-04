@@ -212,6 +212,17 @@ thread_create (const char *name, int priority,
   if(t->pcb == NULL){
     return TID_ERROR;
   }
+  else{
+    /* page for file descriptor */
+    t->pcb->fdt = palloc_get_page(PAL_ZERO);
+    if (t->pcb->fdt = NULL) {
+      palloc_free(t->pcb);
+      return TID_ERROR;
+    }
+  }
+
+  /* file descriptor index setting */
+  t->pcb->next_fd = 2;
 
   /* Parent-child relationship setting */
   sema_init (&(t->pcb->sema_wait_for_load), 0);

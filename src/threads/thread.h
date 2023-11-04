@@ -35,6 +35,10 @@ struct PCB
    struct semaphore sema_wait_for_exit;
    bool child_loaded;
    int exit_code;
+   
+   /* file descriptor */
+   struct file **fdt;
+   int next_fd;
 };
 
 /* A kernel thread or user process.

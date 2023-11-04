@@ -157,6 +157,12 @@ process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
 
+  /* free fdt after closing every files */
+  for (int i = cur->pcb->next_fd - 1; i >= 2; i--) {
+    //close(i);
+  }
+  palloc_free_page(cur->pcb->fdt);
+
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
