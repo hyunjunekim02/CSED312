@@ -420,6 +420,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   success = true;
   t->pcb->child_loaded = true;
+  t->executable = file;
 
  done:
   /* We arrive here whether the load is successful or not. */

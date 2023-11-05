@@ -193,6 +193,10 @@ int open (const char *file) {
   }
   else{
     cur = thread_current();
+    /* denying writes to executables */
+    if(cur->executable && (strcmp (cur->name, file) == 0)){
+      file_deny_write(f);
+    }
     cur->pcb->fdt[cur->pcb->next_fd] = f;
     cur->pcb->next_fd++;
     lock_release (&filesys_lock);

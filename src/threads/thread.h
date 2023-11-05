@@ -131,6 +131,7 @@ struct thread
     struct list_elem child_process_elem;
     struct PCB *pcb;
     bool child_load_success;
+    struct file *executable;
 #endif
 
     /* Owned by thread.c. */
