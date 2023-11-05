@@ -13,6 +13,9 @@
 
 typedef int pid_t;
 
+/* prevent race condition */
+struct lock filesys_lock;
+
 /* System Call Handler */
 static void syscall_handler (struct intr_frame *);
 
@@ -42,6 +45,7 @@ void process_close_file(int fd);
 void
 syscall_init (void) 
 {
+  lock_init(&filesys_lock);
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
@@ -178,14 +182,20 @@ int open (const char *file) {
   }
   check_valid_address(file);
   struct thread *cur;
+
+  /* prevent race condition */
+  lock_acquire (&filesys_lock);
+
   struct file *f = filesys_open(file);
   if (f == NULL) {
+    lock_release (&filesys_lock);
     return -1;
   }
   else{
     cur = thread_current();
     cur->pcb->fdt[cur->pcb->next_fd] = f;
     cur->pcb->next_fd++;
+    lock_release (&filesys_lock);
     return cur->pcb->next_fd-1; //-1 or not?
   }
 }
@@ -201,39 +211,41 @@ int filesize (int fd) {
 
 /* file read system call */
 int read (int fd, void *buffer, unsigned size) {
-  // if (buffer == NULL) {
-  //   exit(-1);
-  // }
   check_valid_address(buffer);
+  lock_acquire (&filesys_lock);
   if (fd == 0) {
     unsigned i;
     uint8_t *local_buffer = (uint8_t *)buffer;
     for (i = 0; i < size; i++) {
       local_buffer[i] = input_getc();
     }
+    lock_release (&filesys_lock);
     return size;
   }
   struct file *f = process_get_file(fd);
   if (f == NULL) {
+    lock_release (&filesys_lock);
     return -1;
   }
+  lock_release (&filesys_lock);
   return file_read(f, buffer, size);
 }
 
 /* file write system call */
 int write (int fd, const void *buffer, unsigned size) {
-  // if (buffer == NULL) {
-  //   exit(-1);
-  // }
   check_valid_address(buffer);
+  lock_acquire (&filesys_lock);
   if (fd == 1) {
     putbuf(buffer, size);
+    lock_release (&filesys_lock);
     return size;
   }
   struct file *f = process_get_file(fd);
   if (f == NULL) {
+    lock_release (&filesys_lock);
     return -1;
   }
+  lock_release (&filesys_lock);
   return file_write(f, buffer, size);
 }
 
