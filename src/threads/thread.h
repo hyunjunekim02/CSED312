@@ -33,6 +33,7 @@ struct PCB
 {
    struct semaphore sema_wait_for_load;
    struct semaphore sema_wait_for_exit;
+   struct semaphore sema_wait_for_destroy;
    bool child_loaded;
    int exit_code;
    

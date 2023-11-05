@@ -34,7 +34,7 @@ unsigned tell (int fd);
 void close (int fd);
 
 /* Helper function for file add */
-int process_add_file (struct file *f);
+// int process_add_file (struct file *f);
 struct file *process_get_file(int fd);
 void process_close_file(int fd);
 
@@ -49,8 +49,6 @@ syscall_init (void)
 static void
 check_valid_address (void *addr)
 {
-  //debugging
-  // hex_dump(addr, addr, 150, 1);
   if (!is_user_vaddr(addr)) //page_fault에 is_kernel_vaddr 옮기기
   {
     exit(-1);
@@ -108,7 +106,6 @@ syscall_handler (struct intr_frame *f UNUSED)
       check_valid_address(f->esp + 20);
       check_valid_address(f->esp + 24);
       check_valid_address(f->esp + 28);
-      //hex_dump((uint32_t *)(f->esp+20), (uint32_t *)(f->esp+20), 150, 1);
       f->eax = write((int)*(uint32_t *)(f->esp+20), (void *)*(uint32_t *)(f->esp + 24), (unsigned)*((uint32_t *)(f->esp + 28)));
       break;
     case SYS_SEEK:
@@ -139,9 +136,9 @@ void halt (void) {
 void exit (int status) {
   struct thread *cur = thread_current();
   cur->pcb->exit_code = status;
-  // if (!cur->pcb->child_loaded){
-  //   sema_up (&(cur->pcb->sema_wait_for_load));
-  // }
+  if (!cur->pcb->child_loaded){
+    sema_up (&(cur->pcb->sema_wait_for_load));
+  }
   printf("%s: exit(%d)\n", thread_current()->name, status);
   thread_exit();
 }
@@ -176,15 +173,21 @@ bool remove (const char *file) {
 
 /* file open system call */
 int open (const char *file) {
-  if (file == NULL) {
-    exit(-1);
-  }
-  check_valid_address(file);
+  // if (file == NULL) {
+  //   exit(-1);
+  // }
+  struct thread *cur;
   struct file *f = filesys_open(file);
   if (f == NULL) {
     return -1;
   }
-  return process_add_file(f);
+  else{
+    cur = thread_current();
+    cur->pcb->fdt[cur->pcb->next_fd] = f;
+    cur->pcb->next_fd++;
+    return cur->pcb->next_fd;
+  }
+  //return process_add_file(f);
 }
 
 /* filesize system call */
@@ -257,13 +260,13 @@ void close (int fd) {
   process_close_file(fd);
 }
 
-int process_add_file (struct file *f) {
-  struct thread *cur = thread_current();
-  cur->pcb->fdt[cur->pcb->next_fd] = f;
-  cur->pcb->next_fd++;
-  // return cur->pcb->next_fd - 1;
-  return cur->pcb->next_fd;
-}
+// int process_add_file (struct file *f) {
+//   struct thread *cur = thread_current();
+//   cur->pcb->fdt[cur->pcb->next_fd] = f;
+//   cur->pcb->next_fd++;
+//   // return cur->pcb->next_fd - 1;
+//   return cur->pcb->next_fd;
+// }
 
 struct file *process_get_file(int fd) {
   struct thread *cur = thread_current();

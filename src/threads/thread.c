@@ -227,6 +227,7 @@ thread_create (const char *name, int priority,
   /* Parent-child relationship setting */
   sema_init (&(t->pcb->sema_wait_for_load), 0);
   sema_init (&(t->pcb->sema_wait_for_exit), 0);
+  sema_init (&(t->pcb->sema_wait_for_destroy), 0);
   t->pcb->exit_code = -1;
   t->pcb->child_loaded = false;
   t->parent_process = thread_current();
@@ -785,7 +786,6 @@ thread_schedule_tail (struct thread *prev)
     {
       ASSERT (prev != cur);
       list_remove (&(prev->child_process_elem));
-      get_child_thread(prev->tid);
       palloc_free_page (prev->pcb);
       palloc_free_page (prev);
     }

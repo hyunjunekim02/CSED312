@@ -122,8 +122,8 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid) 
 {
-  printf("");
-  for (int i=0; i<1000000000; i++);
+  //printf("");
+  //for (int i=0; i<1000000000; i++);
 
   struct thread *child = get_child_thread(child_tid);
   int exit_code;
@@ -139,8 +139,9 @@ process_wait (tid_t child_tid)
 
   /* memory free of the child process */
   list_remove (&(child->child_process_elem));
-  palloc_free_page (child->pcb);
-  palloc_free_page (child);
+  sema_up(&(child->pcb->sema_wait_for_destroy));
+  // palloc_free_page (child->pcb);
+  // palloc_free_page (child);
 
   return exit_code;
 }
@@ -176,6 +177,7 @@ process_exit (void)
     }
   /* signal of child exited */
   sema_up (&(cur->pcb->sema_wait_for_exit));
+  sema_down(&(cur->pcb->sema_wait_for_destroy));
 }
 
 /* Sets up the CPU for running user code in the current
