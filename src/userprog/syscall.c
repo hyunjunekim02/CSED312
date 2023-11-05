@@ -173,9 +173,10 @@ bool remove (const char *file) {
 
 /* file open system call */
 int open (const char *file) {
-  // if (file == NULL) {
-  //   exit(-1);
-  // }
+  if (file == NULL) {
+    exit(-1);
+  }
+  check_valid_address(file);
   struct thread *cur;
   struct file *f = filesys_open(file);
   if (f == NULL) {
@@ -185,9 +186,8 @@ int open (const char *file) {
     cur = thread_current();
     cur->pcb->fdt[cur->pcb->next_fd] = f;
     cur->pcb->next_fd++;
-    return cur->pcb->next_fd;
+    return cur->pcb->next_fd-1; //-1 or not?
   }
-  //return process_add_file(f);
 }
 
 /* filesize system call */
@@ -201,9 +201,9 @@ int filesize (int fd) {
 
 /* file read system call */
 int read (int fd, void *buffer, unsigned size) {
-  if (buffer == NULL) {
-    exit(-1);
-  }
+  // if (buffer == NULL) {
+  //   exit(-1);
+  // }
   check_valid_address(buffer);
   if (fd == 0) {
     unsigned i;
@@ -222,9 +222,9 @@ int read (int fd, void *buffer, unsigned size) {
 
 /* file write system call */
 int write (int fd, const void *buffer, unsigned size) {
-  if (buffer == NULL) {
-    exit(-1);
-  }
+  // if (buffer == NULL) {
+  //   exit(-1);
+  // }
   check_valid_address(buffer);
   if (fd == 1) {
     putbuf(buffer, size);

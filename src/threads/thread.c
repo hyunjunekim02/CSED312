@@ -215,10 +215,14 @@ thread_create (const char *name, int priority,
   else{
     /* page for file descriptor */
     t->pcb->fdt = palloc_get_page(PAL_ZERO);
-    if (t->pcb->fdt = NULL) {
-      palloc_free(t->pcb);
+    if (t->pcb->fdt == NULL) {
+      palloc_free_page(t->pcb);
       return TID_ERROR;
     }
+  }
+
+  for(int i=0; i<64; i++) {
+    t->pcb->fdt[i] = NULL;
   }
 
   /* file descriptor index setting */
