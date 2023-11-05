@@ -54,7 +54,14 @@ process_execute (const char *file_name)
 
   /* memory free */
   palloc_free_page (program_name);
-  return tid;
+
+  /* return tid */
+  if(thread_current()->child_load_success == true){
+    return tid;
+  }
+  else{
+    return TID_ERROR;
+  }
 }
 
 /* A thread function that loads a user process and starts it
@@ -96,6 +103,7 @@ start_process (void *file_name_)
   if (!success){
     thread_exit ();
   }
+  thread_current()->parent_process->child_load_success = true;
 
   //Debugging - argument passing debug purpose
   //hex_dump(if_.esp , if_.esp , 100 , true);
@@ -122,9 +130,6 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid) 
 {
-  //printf("");
-  //for (int i=0; i<1000000000; i++);
-
   struct thread *child = get_child_thread(child_tid);
   int exit_code;
 
@@ -140,8 +145,6 @@ process_wait (tid_t child_tid)
   /* memory free of the child process */
   list_remove (&(child->child_process_elem));
   sema_up(&(child->pcb->sema_wait_for_destroy));
-  // palloc_free_page (child->pcb);
-  // palloc_free_page (child);
 
   return exit_code;
 }
@@ -155,7 +158,7 @@ process_exit (void)
 
   /* free fdt after closing every files */
   for (int i = cur->pcb->next_fd - 1; i >= 2; i--) {
-    //close(i);
+    close(i);
   }
   palloc_free_page(cur->pcb->fdt);
 

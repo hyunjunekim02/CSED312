@@ -130,6 +130,7 @@ struct thread
     struct list child_process_list;
     struct list_elem child_process_elem;
     struct PCB *pcb;
+    bool child_load_success;
 #endif
 
     /* Owned by thread.c. */

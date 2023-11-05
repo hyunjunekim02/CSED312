@@ -235,6 +235,7 @@ thread_create (const char *name, int priority,
   t->pcb->exit_code = -1;
   t->pcb->child_loaded = false;
   t->parent_process = thread_current();
+  t->child_load_success=false;
   list_push_back(&(t->parent_process->child_process_list), &(t->child_process_elem));
 
   /* Add to run queue. */
