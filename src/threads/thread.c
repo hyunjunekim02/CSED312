@@ -209,10 +209,10 @@ thread_create (const char *name, int priority,
 
   /* page for pcb block */
   t->pcb = palloc_get_page(0);
-  if(t->pcb == NULL){
+  if (t->pcb == NULL) {
     return TID_ERROR;
   }
-  else{
+  else {
     /* page for file descriptor */
     t->pcb->fdt = palloc_get_page(PAL_ZERO);
     if (t->pcb->fdt == NULL) {
@@ -221,7 +221,7 @@ thread_create (const char *name, int priority,
     }
   }
 
-  for(int i=0; i<64; i++) {
+  for (int i=0; i<128; i++) {
     t->pcb->fdt[i] = NULL;
   }
 

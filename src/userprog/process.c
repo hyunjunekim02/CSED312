@@ -35,7 +35,7 @@ process_execute (const char *file_name)
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
   program_name = palloc_get_page (0);
-  if (fn_copy == NULL || program_name == NULL){
+  if (fn_copy == NULL || program_name == NULL) {
     return TID_ERROR;
   }
   strlcpy (fn_copy, file_name, PGSIZE);
@@ -44,11 +44,11 @@ process_execute (const char *file_name)
 
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (program_name, PRI_DEFAULT, start_process, fn_copy);
-  if (tid == TID_ERROR){
+  if (tid == TID_ERROR) {
     palloc_free_page (fn_copy);
   }
   /* Parent-child: wait until load */
-  else{
+  else {
     sema_down (&(get_child_thread(tid)->pcb->sema_wait_for_load));
   }
 
@@ -56,10 +56,10 @@ process_execute (const char *file_name)
   palloc_free_page (program_name);
 
   /* return tid */
-  if(thread_current()->child_load_success == true){
+  if (thread_current()->child_load_success == true) {
     return tid;
   }
-  else{
+  else {
     return TID_ERROR;
   }
 }
@@ -157,8 +157,17 @@ process_exit (void)
   uint32_t *pd;
 
   /* free fdt after closing every files */
-  for (int i = cur->pcb->next_fd - 1; i >= 2; i--) {
-    close(i);
+  for (int i = cur->pcb->next_fd - 1; i >= 0; i--) {
+    struct file *f = cur->pcb->fdt[i];
+    // if (i < 2 || i >= cur->pcb->next_fd) {
+    //   return;
+    // }
+    // if (f == NULL) {
+    //   exit(-1);
+    // }
+    file_close(f);
+    cur->pcb->fdt[i] = NULL;
+    // palloc_free_page(cur->pcb->fdt[i]);
   }
   palloc_free_page(cur->pcb->fdt);
 
