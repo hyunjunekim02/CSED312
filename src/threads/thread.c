@@ -221,10 +221,6 @@ thread_create (const char *name, int priority,
     }
   }
 
-  for (int i=0; i<128; i++) {
-    t->pcb->fdt[i] = NULL;
-  }
-
   /* file descriptor index setting */
   t->pcb->next_fd = 2;
 
@@ -342,8 +338,10 @@ thread_exit (void)
      and schedule another process.  That process will destroy us
      when it calls thread_schedule_tail(). */
   intr_disable ();
-  list_remove (&thread_current()->allelem);
-  thread_current ()->status = THREAD_DYING;
+  struct thread* cur = thread_current();
+  list_remove (&cur->allelem);
+  cur->status = THREAD_DYING;
+  palloc_free_page(cur->pcb);
   schedule ();
   NOT_REACHED ();
 }
@@ -791,8 +789,6 @@ thread_schedule_tail (struct thread *prev)
   if (prev != NULL && prev->status == THREAD_DYING && prev != initial_thread) 
     {
       ASSERT (prev != cur);
-      list_remove (&(prev->child_process_elem));
-      palloc_free_page (prev->pcb);
       palloc_free_page (prev);
     }
 }

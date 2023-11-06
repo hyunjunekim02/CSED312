@@ -160,7 +160,6 @@ process_exit (void)
   for (int i = cur->pcb->next_fd - 1; i >= 0; i--) {
     struct file *f = cur->pcb->fdt[i];
     file_close(f);
-    cur->pcb->fdt[i] = NULL;
   }
   palloc_free_multiple(cur->pcb->fdt, 3);
 

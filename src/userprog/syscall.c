@@ -295,7 +295,6 @@ void process_close_file(int fd) {
     exit(-1);
   }
   file_close(f);
-  cur->pcb->fdt[fd] = NULL;
   do{
     cur->pcb->fdt[index] = cur->pcb->fdt[index + 1];
     index ++;
