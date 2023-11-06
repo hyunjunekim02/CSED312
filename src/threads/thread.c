@@ -229,7 +229,7 @@ thread_create (const char *name, int priority,
     printf("\nthread_create: fdt allocated ID: %d\n", t->tid);
   }
 
-  for(int i=0; i<64; i++) {
+  for(int i=0; i<128; i++) {
     t->pcb->fdt[i] = NULL;
   }
 
