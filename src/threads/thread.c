@@ -185,11 +185,8 @@ thread_create (const char *name, int priority,
 
   /* Allocate thread. */
   t = palloc_get_page (PAL_ZERO);
-  if (t == NULL){
+  if (t == NULL)
     return TID_ERROR;
-    printf("\nthread_create: thread allocated fail");
-  }
-  printf("\nthread_create: thread allocated");
 
   /* Initialize thread. */
   init_thread (t, name, priority);
@@ -212,24 +209,19 @@ thread_create (const char *name, int priority,
 
   /* page for pcb block */
   t->pcb = palloc_get_page(0);
-  if(t->pcb == NULL){
-    printf("\nthread_create: pcb allocated fail ID: %d", t->tid);
+  if (t->pcb == NULL) {
     return TID_ERROR;
   }
   else {
     /* page for file descriptor */
-    printf("\nthread_create: pcb allocated ID: %d", t->tid);
-    t->pcb->fdt = palloc_get_page(PAL_ZERO);
+    t->pcb->fdt = palloc_get_multiple(PAL_ZERO, 3);
     if (t->pcb->fdt == NULL) {
       palloc_free_page(t->pcb);
-      printf("\nthread_create: fdt allocated fail ID: %d", t->tid);
-      printf("\nthread_create: free pcb");
       return TID_ERROR;
     }
-    printf("\nthread_create: fdt allocated ID: %d\n", t->tid);
   }
 
-  for(int i=0; i<128; i++) {
+  for (int i=0; i<128; i++) {
     t->pcb->fdt[i] = NULL;
   }
 
@@ -800,13 +792,7 @@ thread_schedule_tail (struct thread *prev)
     {
       ASSERT (prev != cur);
       list_remove (&(prev->child_process_elem));
-      // if(prev->pcb->fdt!=NULL){
-      //   palloc_free_page(prev->pcb->fdt);
-      //   printf("\nthread_schedule_tail: fdt free ID: %d\n", cur->tid);
-      // }
-      // palloc_free_page (prev->pcb);
-      // printf("\nthread_schedule_tail: pcb free ID: %d\n", cur->tid);
-      printf("\nthread_schedule_tail: thread free ID: %d\n", prev->tid);
+      palloc_free_page (prev->pcb);
       palloc_free_page (prev);
     }
 }

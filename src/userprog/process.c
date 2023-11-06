@@ -145,8 +145,6 @@ process_wait (tid_t child_tid)
   /* memory free of the child process */
   list_remove (&(child->child_process_elem));
   sema_up(&(child->pcb->sema_wait_for_destroy));
-  palloc_free_page(child->pcb);
-  printf("process_wait: pcb free ID: %d", child->tid);
 
   return exit_code;
 }
@@ -159,14 +157,12 @@ process_exit (void)
   uint32_t *pd;
 
   /* free fdt after closing every files */
-  for (int i = cur->pcb->next_fd - 1; i >= 2; i--) {
+  for (int i = cur->pcb->next_fd - 1; i >= 0; i--) {
     struct file *f = cur->pcb->fdt[i];
     file_close(f);
     cur->pcb->fdt[i] = NULL;
   }
-  palloc_free_page(cur->pcb->fdt);
-  cur->pcb->fdt == NULL;
-  printf("\nprocess_exit: fdt free ID: %d\n", cur->tid);
+  palloc_free_multiple(cur->pcb->fdt, 3);
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */

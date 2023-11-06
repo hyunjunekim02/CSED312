@@ -276,14 +276,6 @@ void close (int fd) {
   process_close_file(fd);
 }
 
-// int process_add_file (struct file *f) {
-//   struct thread *cur = thread_current();
-//   cur->pcb->fdt[cur->pcb->next_fd] = f;
-//   cur->pcb->next_fd++;
-//   // return cur->pcb->next_fd - 1;
-//   return cur->pcb->next_fd;
-// }
-
 struct file *process_get_file(int fd) {
   struct thread *cur = thread_current();
   if (fd < 2 || fd >= cur->pcb->next_fd) {
