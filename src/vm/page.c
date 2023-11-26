@@ -38,18 +38,18 @@ delete_vme (struct hash *vm, struct vm_entry *vme){
 }
 
 /* virtual memory entry finding function */
-struct vm_entry
-*find_vme (void *vaddr){
+struct vm_entry*
+find_vme (void *vaddr){
   struct hash *vm;
   struct vm_entry vme;
   struct hash_elem *elem;
 
-  vm = &thread_current ()->vm;
+  vm = &thread_current ()->vm_table;
   vme.vaddr = pg_round_down (vaddr);
   ASSERT (pg_ofs (vme.vaddr) == 0);
   elem = hash_find (vm, &vme.elem);
-  if (elem){
-    return hash_entry(elem, struct vm_entry, elem)
+  if (elem) {
+    return hash_entry(elem, struct vm_entry, elem);
   }
   return NULL;
 }
