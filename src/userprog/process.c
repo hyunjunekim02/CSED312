@@ -645,12 +645,13 @@ handle_mm_fault (struct vm_entry *vme)
       palloc_free_page(kpage);
       return false;
   }
-
+  
   if (install_page(vme->vaddr, kpage, vme->writable) == false) {
     palloc_free_page(kpage);
     return false;
   }
   
+  vme->is_loaded = true;
   return true;
 }
   
