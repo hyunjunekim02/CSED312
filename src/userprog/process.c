@@ -17,6 +17,7 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "vm/page.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -74,6 +75,10 @@ start_process (void *file_name_)
   bool success;
   char *token, save_ptr;
   int argc = 0;
+  struct thread *cur = thread_current();
+
+  /* Initialize vm_table */
+  vm_init(&(cur->vm_table));
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
@@ -96,17 +101,14 @@ start_process (void *file_name_)
   palloc_free_page (argv);
 
   /* parent-child: after load, signal */
-  sema_up (&(thread_current()->pcb->sema_wait_for_load));
+  sema_up (&(cur->pcb->sema_wait_for_load));
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success){
     thread_exit ();
   }
-  thread_current()->parent_process->child_load_success = true;
-
-  //Debugging - argument passing debug purpose
-  //hex_dump(if_.esp , if_.esp , 100 , true);
+  cur->parent_process->child_load_success = true;
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
