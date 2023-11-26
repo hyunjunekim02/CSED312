@@ -19,7 +19,7 @@
 #define VM_FILE 1
 #define VM_ANON 2
 
-struct list lru_list;
+struct list frame_table;
 
 struct vm_entry {
   uint8_t type;
@@ -39,7 +39,7 @@ struct frame_entry {
     void *physical_address_ptr;         // 페이지의 실제 주소를 가리키는 포인터
     struct vm_entry *vm_entry_ptr;      // 해당 페이지에 매핑되는 vm_entry를 가리키는 포인터
     struct thread *owner_thread_ptr;    // 해당 페이지를 사용하는 스레드를 가리키는 포인터
-    struct list_elem lru_elem;          // LRU 리스트에서 사용되는 list_elem 구조체
+    struct list_elem elem;          // LRU 리스트에서 사용되는 list_elem 구조체
 };
 
 /* Virtual Memory Table control functions */
