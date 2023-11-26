@@ -32,7 +32,7 @@ struct vm_entry {
   size_t swap_slot;
   struct file* file;
   struct list_elem mmap_elem;
-  struct hash_elem elem;
+  struct hash_elem hash_elem;
 };
 
 struct frame_entry {

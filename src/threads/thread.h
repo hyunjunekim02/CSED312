@@ -137,6 +137,9 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
     
+    /* Virtual Memory */
+    struct hash vm_table;
+
     /* wake up time used in priority scheduling*/
     int64_t wakeup_time;
   };
