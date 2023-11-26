@@ -548,7 +548,8 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       vme->zero_bytes = page_zero_bytes;
       vme->swap_slot = 0;
       vme->file = file;
-      // mmap_elem, hash_elem에 넣는 것도 필요함
+      insert_vme(&(thread_current()->vm_table), vme);
+      // mmap_elem에 넣는 것도 필요함
 
       /* Advance. */
       read_bytes -= page_read_bytes;
@@ -590,7 +591,7 @@ setup_stack (void **esp)
   vme->zero_bytes = PGSIZE;
   vme->swap_slot = 0;
   vme->file = NULL;
-  // hash_elem에 삽입
+  insert_vme(&(thread_current()->vm_table), vme);
   return success;
 }
 
@@ -614,8 +615,9 @@ install_page (void *upage, void *kpage, bool writable)
           && pagedir_set_page (t->pagedir, upage, kpage, writable));
 }
 
-bool handle_mm_fault (struct vm_entry *vme) {
-  
+bool
+handle_mm_fault (struct vm_entry *vme)
+{
   uint8_t *kpage = palloc_get_page(PAL_USER);
   if (kpage == NULL) {
     return false;
@@ -628,23 +630,26 @@ bool handle_mm_fault (struct vm_entry *vme) {
         return false;
       }
       break;
-    case VM_FILE:
-      if (load_file(kpage, vme) == false) {
-        palloc_free_page(kpage);
-        return false;
-      }
-      break;
-    case VM_ANON:
-      break;
+    // case VM_FILE:
+    //   if (load_file(kpage, vme) == false) {
+    //     palloc_free_page(kpage);
+    //     return false;
+    //   }
+    //   break;
+    // case VM_ANON:
+    //   break;
     // case VM_STACK:
     //   break;
     default:
-      break;
+      palloc_free_page(kpage);
+      return false;
   }
 
   if (install_page(vme->vaddr, kpage, vme->writable) == false) {
     palloc_free_page(kpage);
     return false;
   }
+  
+  return true;
 }
   
