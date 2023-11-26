@@ -1,19 +1,14 @@
+#ifndef VM_PAGE_H
+#define VM_PAGE_H
+
 #include "threads/thread.h"
 #include <debug.h>
 #include <stddef.h>
-#include <random.h>
 #include <stdio.h>
 #include <string.h>
-#include "threads/flags.h"
-#include "threads/interrupt.h"
-#include "threads/intr-stubs.h"
 #include "threads/palloc.h"
-#include "threads/switch.h"
-#include "threads/synch.h"
 #include "threads/vaddr.h"
-#include "threads/fixed_point.h"
 #include "lib/kernel/hash.h"
-// 뭐 인클루드 시켜야 되냐?
 
 #define VM_BIN 0
 #define VM_FILE 1
@@ -289,3 +284,5 @@ bool load_file (void *kaddr, struct vm_entry *vme);
 // }
 
 
+
+#endif /* vm/page.h */
