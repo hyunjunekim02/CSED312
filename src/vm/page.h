@@ -32,7 +32,7 @@ struct vm_entry {
   size_t swap_slot;
   struct file* file;
   struct list_elem mmap_elem;
-  struct hash_elem hash_elem;
+  struct hash_elem elem;
 };
 
 struct frame_entry {
@@ -42,18 +42,14 @@ struct frame_entry {
     struct list_elem lru_elem;          // LRU 리스트에서 사용되는 list_elem 구조체
 };
 
+/* Virtual Memory Table control functions */
+void vm_init (struct hash *vm_table);
+bool insert_vme (struct hash *vm, struct vm_entry *vme);
+bool delete_vme (struct hash *vm, struct vm_entry *vme);
+struct vm_entry *find_vme (void *vaddr);
+void vm_destroy (struct hash *vm);
+void vm_destroy_func (struct hash_elem *e, void *aux UNUSED);
 
-
-
-// void vm_init (struct hash *vm);
-
-// bool insert_vme (struct hash *vm, struct vm_entry *vme);
-
-// bool delete_vme (struct hash *vm, struct vm_entry *vme);
-
-// struct vm_entry *find_vme (void *vaddr);
-
-// void vm_destroy (struct hash *vm);
 
 // bool load_file (void *kaddr, struct vm_entry *vme);
 
