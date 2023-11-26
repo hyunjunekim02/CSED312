@@ -57,7 +57,7 @@ check_valid_address (void *addr, void* esp)
   {
     exit(-1);
   }
-  return find_vme(thread_current()->vm, addr);
+  return find_vme(thread_current()->vm_table, addr);
 }
 
 /* System call handler */
