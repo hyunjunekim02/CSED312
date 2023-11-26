@@ -51,11 +51,10 @@ void vm_destroy (struct hash *vm);
 void vm_destroy_func (struct hash_elem *e, void *aux UNUSED);
 
 
-// bool load_file (void *kaddr, struct vm_entry *vme);
+bool load_file (void *kaddr, struct vm_entry *vme);
 
 // bool load_page (void *fault_addr);
 
-// bool handle_mm_fault (struct vm_entry *vme);
 
 // void lru_list_init(void) {
 //     list_init(&lru_list);

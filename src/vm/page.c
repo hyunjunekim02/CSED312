@@ -76,3 +76,11 @@ vm_destroy_func (struct hash_elem *e, void *aux UNUSED)
 
   free(vme);
 }
+
+bool load_file (void *kaddr, struct vm_entry *vme) {
+  if (file_read_at(vme->file, kaddr, vme->read_bytes, vme->offset) != (int)vme->read_bytes) {
+    return false;
+  }
+  memset(kaddr + vme->read_bytes, 0, vme->zero_bytes);
+  return true;
+}

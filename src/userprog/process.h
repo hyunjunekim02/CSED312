@@ -11,4 +11,6 @@ void process_activate (void);
 /* argument stack setting function */
 void set_stack_arguments (char **argv, int argc, void **esp);
 
+bool handle_mm_fault (struct vm_entry *vme);
+
 #endif /* userprog/process.h */
