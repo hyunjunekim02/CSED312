@@ -165,6 +165,9 @@ process_exit (void)
   }
   palloc_free_multiple(cur->pcb->fdt, 3);
 
+  /* vm table destroy */
+  vm_destroy(&(cur->vm_table));
+
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
