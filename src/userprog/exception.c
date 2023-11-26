@@ -5,7 +5,8 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
-
+#include "userprog/process.h"
+#include "vm/page.h"
 /* Number of page faults processed. */
 static long long page_fault_cnt;
 
@@ -145,14 +146,26 @@ page_fault (struct intr_frame *f)
   page_fault_cnt++;
 
   /* Determine cause. */
-  not_present = (f->error_code & PF_P) == 0;
-  write = (f->error_code & PF_W) != 0;
-  user = (f->error_code & PF_U) != 0;
+  not_present = (f->error_code & PF_P) == 0;    // 페이지가 물리 메모리에 없는 경우 true
+  write = (f->error_code & PF_W) != 0;          // 잘못된 write 연산으로 페이지 폴트났을 때 true
+  user = (f->error_code & PF_U) != 0;           // 사용자 모드에서 실행된 이상한 코드 때문에 페이지 폴트 났을 때 true
+
+   if (not_present) {
+      struct vm_entry *vme = find_vme(fault_addr);
+      if (vme == NULL) {
+         exit(-1);
+      }
+      if (handle_mm_fault(vme) == false) {
+         exit(-1);
+      }
+   }
+   
 
 //   /* exit case */
 //   if (!user || is_kernel_vaddr(fault_addr) || not_present) {
 //     exit(-1);
 //   }
+
 
    
 
