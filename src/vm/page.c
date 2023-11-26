@@ -90,7 +90,7 @@ check_valid_buffer (void* buffer, unsigned size, void* esp, bool to_write){
     if(vme == NULL){
       exit(-1); //여기 exit 있어서 syscall.c로 옮겨야 하나?
     }
-    if(to_write == true && vm_entry->writable == false){
+    if(to_write == true && vme->writable == false){
       exit(-1);
     }
   }
