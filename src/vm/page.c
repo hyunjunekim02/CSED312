@@ -84,3 +84,29 @@ bool load_file (void *kaddr, struct vm_entry *vme) {
   memset(kaddr + vme->read_bytes, 0, vme->zero_bytes);
   return true;
 }
+
+/* buffer validation function */
+void
+check_valid_buffer(void* buffer, unsigned size, void* esp, bool to_write){
+  for(int i=0; i<size; i++){
+    struct vm_entry *vme = check_valid_address(buffer + i);
+    if(vme == NULL){
+      exit(-1); //여기 exit 있어서 syscall.c로 옮겨야 하나?
+    }
+    if(to_write == true && vm_entry->writable == false){
+      exit(-1);
+    }
+  }
+}
+
+/* string vm entry validation function */
+void
+check_valid_string (const void *str, void *esp){
+  char *check_str = (char *)str;
+	check_valid_address((void *)check_str, esp);
+	/* check validity of all string's address */
+	while(*check_str != 0){
+		check_str += 1;
+		check_valid_address(check_str, esp);
+  }
+}

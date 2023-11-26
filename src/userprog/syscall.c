@@ -10,6 +10,7 @@
 #include "filesys/filesys.h"
 #include "filesys/file.h"
 #include "devices/input.h"
+#include "vm/page.h"
 
 typedef int pid_t;
 
@@ -37,7 +38,6 @@ unsigned tell (int fd);
 void close (int fd);
 
 /* Helper function for file add */
-// int process_add_file (struct file *f);
 struct file *process_get_file(int fd);
 void process_close_file(int fd);
 
@@ -50,13 +50,14 @@ syscall_init (void)
 }
 
 /* valid address checking */
-static void
-check_valid_address (void *addr)
+struct vm_entry *
+check_valid_address (void *addr, void* esp)
 {
   if (!is_user_vaddr(addr)) //page_fault에 is_kernel_vaddr 옮기기
   {
     exit(-1);
   }
+  return find_vme(thread_current()->vm, addr);
 }
 
 /* System call handler */
@@ -72,57 +73,59 @@ syscall_handler (struct intr_frame *f UNUSED)
       halt();
       break;
     case SYS_EXIT:
-      check_valid_address(f->esp + 4);
+      check_valid_address(f->esp + 4, f->esp);
       exit(*(uint32_t *)(f->esp + 4));
       break;
     case SYS_EXEC:
-      check_valid_address(f->esp + 4);
+      check_valid_address(f->esp + 4, f->esp);
       f->eax = exec((const char *)*(uint32_t *)(f->esp + 4));
       break;
     case SYS_WAIT:
-      check_valid_address(f->esp + 4);
+      check_valid_address(f->esp + 4, f->esp);
       f->eax = wait((pid_t)*(uint32_t *)(f->esp + 4));
       break;
     case SYS_CREATE:
-      check_valid_address(f->esp + 16);
-      check_valid_address(f->esp + 20);
+      check_valid_address(f->esp + 16, f->esp);
+      check_valid_address(f->esp + 20, f->esp);
       f->eax = create((const char *)*(uint32_t *)(f->esp + 16), (unsigned)*(uint32_t *)(f->esp + 20));
       break;
     case SYS_REMOVE:
-      check_valid_address(f->esp + 4);
+      check_valid_address(f->esp + 4, f->esp);
       f->eax = remove((const char*)*(uint32_t *)(f->esp + 4));
       break;
     case SYS_OPEN:
-      check_valid_address(f->esp + 4);
+      check_valid_address(f->esp + 4, f->esp);
       f->eax = open((const char*)*(uint32_t *)(f->esp + 4));
       break;
     case SYS_FILESIZE:
-      check_valid_address(f->esp + 4);
+      check_valid_address(f->esp + 4, f->esp);
       f->eax = filesize((int)*(uint32_t *)(f->esp + 4));
       break;
     case SYS_READ:
-      check_valid_address(f->esp + 20);
-      check_valid_address(f->esp + 24);
-      check_valid_address(f->esp + 28);
+      // check_valid_address(f->esp + 20, f->esp);
+      // check_valid_address(f->esp + 24, f->esp);
+      // check_valid_address(f->esp + 28, f->esp);
+      check_valid_buffer((void *)*(uint32_t *)(f->esp + 24), unsigned (unsigned)*(uint32_t *)(f->esp + 28), f->esp, 1);
       f->eax = read((int)*(uint32_t *)(f->esp+20), (void *)*(uint32_t *)(f->esp + 24), (unsigned)*((uint32_t *)(f->esp + 28)));
       break;
     case SYS_WRITE:
-      check_valid_address(f->esp + 20);
-      check_valid_address(f->esp + 24);
-      check_valid_address(f->esp + 28);
+      // check_valid_address(f->esp + 20, f->esp);
+      // check_valid_address(f->esp + 24, f->esp);
+      // check_valid_address(f->esp + 28, f->esp);
+      check_valid_string((void *)*(uint32_t *)(f->esp + 24), f->esp);
       f->eax = write((int)*(uint32_t *)(f->esp+20), (void *)*(uint32_t *)(f->esp + 24), (unsigned)*((uint32_t *)(f->esp + 28)));
       break;
     case SYS_SEEK:
-      check_valid_address(f->esp + 16);
-      check_valid_address(f->esp + 20);
+      check_valid_address(f->esp + 16, f->esp);
+      check_valid_address(f->esp + 20, f->esp);
       seek((int)*(uint32_t *)(f->esp + 16), (unsigned)*(uint32_t *)(f->esp + 20));
       break;
     case SYS_TELL:
-      check_valid_address(f->esp + 4);
+      check_valid_address(f->esp + 4, f->esp);
       f->eax = tell((int)*(uint32_t *)(f->esp + 4));
       break;
     case SYS_CLOSE:
-      check_valid_address(f->esp + 4);
+      check_valid_address(f->esp + 4, f->esp);
       close((int)*(uint32_t *)(f->esp + 4));
       break;
     default:
@@ -162,7 +165,7 @@ bool create (const char *file, unsigned initial_size) {
   if (file == NULL) {
     exit(-1);
   }
-  check_valid_address(file);
+  // check_valid_address(file);
   return filesys_create(file, initial_size);
 }
 
@@ -171,7 +174,7 @@ bool remove (const char *file) {
   if (file == NULL) {
     exit(-1);
   }
-  check_valid_address(file);
+  // check_valid_address(file);
   return filesys_remove(file);
 }
 
@@ -180,7 +183,7 @@ int open (const char *file) {
   if (file == NULL) {
     exit(-1);
   }
-  check_valid_address(file);
+  // check_valid_address(file);
   struct thread *cur;
 
   /* prevent race condition */
@@ -237,7 +240,7 @@ int read (int fd, void *buffer, unsigned size) {
 
 /* file write system call */
 int write (int fd, const void *buffer, unsigned size) {
-  check_valid_address(buffer);
+  // check_valid_address(buffer);
   lock_acquire (&filesys_lock);
   if (fd == 1) {
     putbuf(buffer, size);
