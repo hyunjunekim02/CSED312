@@ -1,5 +1,13 @@
+#include <debug.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <string.h>
 #include "vm/page.h"
-
+#include "filesys/file.h"
+#include "lib/kernel/hash.h"
+#include "threads/thread.h"
+#include "threads/palloc.h"
+#include "threads/vaddr.h"
 
 static unsigned vm_hash_func (const struct hash_elem *e, void *aux);
 static bool vm_less_func (const struct hash_elem *a, const struct hash_elem *b, void *aux);
@@ -67,14 +75,14 @@ vm_destroy_func (struct hash_elem *e, void *aux UNUSED)
   uint32_t *pd = thread_current()->pagedir;
 
   if (vme->is_loaded) {
-    palloc_free_page(vme->vaddr);
     pagedir_clear_page(pd, vme->vaddr);
   }
 
   free(vme);
 }
 
-bool load_file (void *kaddr, struct vm_entry *vme) {
+bool load_file (void *kaddr, struct vm_entry *vme)
+{
   if (file_read_at(vme->file, kaddr, vme->read_bytes, vme->offset) != (int)vme->read_bytes) {
     return false;
   }
@@ -84,13 +92,14 @@ bool load_file (void *kaddr, struct vm_entry *vme) {
 
 /* buffer validation function */
 void
-check_valid_buffer (void* buffer, unsigned size, void* esp, bool to_write){
-  for(int i = 0; i < size; i++){
+check_valid_buffer (void* buffer, unsigned size, void* esp, bool to_write)
+{
+  for (int i = 0; i < size; i++) {
     struct vm_entry *vme = check_valid_address(buffer + i, esp);
-    if(vme == NULL){
+    if (vme == NULL) {
       exit(-1); //여기 exit 있어서 syscall.c로 옮겨야 하나?
     }
-    if(to_write == true && vme->writable == false){
+    if (to_write == true && vme->writable == false) {
       exit(-1);
     }
   }
@@ -98,11 +107,12 @@ check_valid_buffer (void* buffer, unsigned size, void* esp, bool to_write){
 
 /* string vm entry validation function */
 void
-check_valid_string (const void *str, void *esp){
+check_valid_string (const void *str, void *esp)
+{
   char *check_str = (char *)str;
 	check_valid_address((void *)check_str, esp);
 	/* check validity of all string's address */
-	while(*check_str != 0){
+	while (*check_str != 0) {
 		check_str += 1;
 		check_valid_address(check_str, esp);
   }

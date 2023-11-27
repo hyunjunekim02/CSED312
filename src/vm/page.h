@@ -2,13 +2,8 @@
 #define VM_PAGE_H
 
 #include "threads/thread.h"
-#include <debug.h>
-#include <stddef.h>
-#include <stdio.h>
-#include <string.h>
-#include "threads/palloc.h"
-#include "threads/vaddr.h"
 #include "lib/kernel/hash.h"
+#include "filesys/file.h"
 
 #define VM_BIN 0
 #define VM_FILE 1

@@ -147,7 +147,7 @@ page_fault (struct intr_frame *f)
   page_fault_cnt++;
 
   /* Determine cause. */
-  not_present = (f->error_code & PF_P) == 0;    // 페이지가 물리 메모리에 없는 경우 true
+  not_present = (f->error_code & PF_P) == 0;    // 페이지가 물리 메모리에 없는 경우 true => gdb에서 확인가능
   write = (f->error_code & PF_W) != 0;          // 잘못된 write 연산으로 페이지 폴트났을 때 true
   user = (f->error_code & PF_U) != 0;           // 사용자 모드에서 실행된 이상한 코드 때문에 페이지 폴트 났을 때 true
 
