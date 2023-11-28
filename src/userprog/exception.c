@@ -160,7 +160,10 @@ page_fault (struct intr_frame *f)
          exit(-1);
       }
    }
-   
+
+   if(is_kernel_vaddr(fault_addr)){
+      exit(-1);
+   }
 
 //   /* exit case */
 //   if (!user || is_kernel_vaddr(fault_addr) || not_present) {

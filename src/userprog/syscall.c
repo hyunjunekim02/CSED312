@@ -53,7 +53,7 @@ syscall_init (void)
 struct vm_entry *
 check_valid_address (void *addr, void* esp)
 {
-  if (!is_user_vaddr(addr)) //page_fault에 is_kernel_vaddr 옮기기
+  if (!is_user_vaddr(addr))
   {
     exit(-1);
   }
