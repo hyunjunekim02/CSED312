@@ -12,6 +12,8 @@
 #include "devices/input.h"
 #include "vm/page.h"
 
+#define	USER_VADDR_BOTTOM ((void *) 0x08048000)
+
 typedef int pid_t;
 
 /* prevent race condition */
@@ -53,9 +55,9 @@ syscall_init (void)
 struct vm_entry *
 check_valid_address (void *addr, void* esp)
 {
-  if (!is_user_vaddr(addr))
-  {
+  if (is_kernel_vaddr(addr) || addr < USER_VADDR_BOTTOM) {
     exit(-1);
+    // return NULL;
   }
   return find_vme(addr);
 }
@@ -64,7 +66,6 @@ check_valid_address (void *addr, void* esp)
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {
-  int arg[3];
   uint32_t vec_no = *(uint32_t *)(f->esp);
 
   /* each system call cases */
@@ -105,7 +106,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       // check_valid_address(f->esp + 20, f->esp);
       // check_valid_address(f->esp + 24, f->esp);
       // check_valid_address(f->esp + 28, f->esp);
-      check_valid_buffer((void *)*(uint32_t *)(f->esp + 24), (unsigned)*(uint32_t *)(f->esp + 28), f->esp, 1);
+      check_valid_buffer((void *)*(uint32_t *)(f->esp + 24), (unsigned)*(uint32_t *)(f->esp + 28), f->esp, true);
       f->eax = read((int)*(uint32_t *)(f->esp+20), (void *)*(uint32_t *)(f->esp + 24), (unsigned)*((uint32_t *)(f->esp + 28)));
       break;
     case SYS_WRITE:

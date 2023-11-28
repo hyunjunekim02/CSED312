@@ -44,6 +44,9 @@ void vm_destroy_func (struct hash_elem *e, void *aux UNUSED);
 
 bool load_file (void *kaddr, struct vm_entry *vme);
 
+void check_valid_buffer (void* buffer, unsigned size, void* esp, bool to_write);
+void check_valid_string (const void *str, void *esp);
+
 // bool load_page (void *fault_addr);
 
 

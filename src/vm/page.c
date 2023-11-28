@@ -8,6 +8,7 @@
 #include "threads/thread.h"
 #include "threads/palloc.h"
 #include "threads/vaddr.h"
+#include "userprog/syscall.h"
 
 static unsigned vm_hash_func (const struct hash_elem *e, void *aux);
 static bool vm_less_func (const struct hash_elem *a, const struct hash_elem *b, void *aux);
