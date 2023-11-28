@@ -25,6 +25,7 @@ struct vm_entry {
   struct hash_elem elem;
 };
 
+/* 아직 쓰인바 없음 */
 struct frame_entry {
     void *physical_address_ptr;         // 페이지의 실제 주소를 가리키는 포인터
     struct vm_entry *vm_entry_ptr;      // 해당 페이지에 매핑되는 vm_entry를 가리키는 포인터

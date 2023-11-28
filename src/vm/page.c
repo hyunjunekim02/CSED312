@@ -54,7 +54,6 @@ find_vme (void *vaddr)
 
   vm = &thread_current ()->vm_table;
   vme.vaddr = pg_round_down (vaddr);
-  ASSERT (pg_ofs (vme.vaddr) == 0);
   elem = hash_find (vm, &vme.elem);
   if (elem) {
     return hash_entry(elem, struct vm_entry, elem);
@@ -75,6 +74,7 @@ vm_destroy_func (struct hash_elem *e, void *aux UNUSED)
   uint32_t *pd = thread_current()->pagedir;
 
   if (vme->is_loaded) {
+    // palloc_free_page(vme->vaddr);
     pagedir_clear_page(pd, vme->vaddr);
   }
 
