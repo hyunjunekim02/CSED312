@@ -105,6 +105,9 @@ check_valid_buffer (void* buffer, unsigned size, void* esp, bool to_write)
     if (to_write == true && vme->writable == false) {
       exit(-1);
     }
+    if (to_write == false && vme->writable == true) {
+      exit(-1);
+    }
   }
 }
 
@@ -113,9 +116,9 @@ check_valid_string (const void *str, void *esp)
 {
   char *check_str = (char *)str;
 	
-	while (*check_str != "\n") {
+	while (*check_str != ' ') {
 		struct vm_entry *vme = check_valid_address((void *)check_str, esp);
-    if (vme == NULL || vme->writable == false) {
+    if (vme == NULL) {
       exit(-1);
     }
     check_str += 1;
