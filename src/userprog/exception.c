@@ -161,17 +161,21 @@ page_fault (struct intr_frame *f)
       }
    }
 
-   if(is_kernel_vaddr(fault_addr)){
+   if(is_kernel_vaddr(fault_addr)/* || (write && user)*/){
       exit(-1);
+   }
+
+   if(write){
+      struct vm_entry *vme = find_vme(fault_addr);
+      if(vme->writable == false){
+         exit(-1);
+      }
    }
 
 //   /* exit case */
 //   if (!user || is_kernel_vaddr(fault_addr) || not_present) {
 //     exit(-1);
 //   }
-
-
-   
 
 }
 

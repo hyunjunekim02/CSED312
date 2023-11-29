@@ -115,12 +115,10 @@ void
 check_valid_string (const void *str, void *esp)
 {
   char *check_str = (char *)str;
-	
-	while (*check_str != ' ') {
-		struct vm_entry *vme = check_valid_address((void *)check_str, esp);
-    if (vme == NULL) {
-      exit(-1);
-    }
-    check_str += 1;
+	check_valid_address((void *)check_str, esp);
+
+	while (*check_str != 0) {
+		check_str += 1;
+		check_valid_address(check_str, esp);
   }
 }
