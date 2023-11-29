@@ -6,4 +6,6 @@
 void syscall_init (void);
 void exit (int status);
 
+struct vm_entry *check_valid_address (void *addr, void* esp);
+
 #endif /* userprog/syscall.h */

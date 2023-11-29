@@ -94,7 +94,6 @@ bool load_file (void *kaddr, struct vm_entry *vme)
   return true;
 }
 
-/* buffer validation function */
 void
 check_valid_buffer (void* buffer, unsigned size, void* esp, bool to_write)
 {
@@ -109,15 +108,16 @@ check_valid_buffer (void* buffer, unsigned size, void* esp, bool to_write)
   }
 }
 
-/* string vm entry validation function */
 void
 check_valid_string (const void *str, void *esp)
 {
   char *check_str = (char *)str;
-	check_valid_address((void *)check_str, esp);
-	/* check validity of all string's address */
-	while (*check_str != 0) {
-		check_str += 1;
-		check_valid_address(check_str, esp);
+	
+	while (*check_str != "\n") {
+		struct vm_entry *vme = check_valid_address((void *)check_str, esp);
+    if (vme == NULL || vme->writable == false) {
+      exit(-1);
+    }
+    check_str += 1;
   }
 }

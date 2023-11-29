@@ -110,9 +110,6 @@ syscall_handler (struct intr_frame *f UNUSED)
       f->eax = read((int)*(uint32_t *)(f->esp+20), (void *)*(uint32_t *)(f->esp + 24), (unsigned)*((uint32_t *)(f->esp + 28)));
       break;
     case SYS_WRITE:
-      // check_valid_address(f->esp + 20, f->esp);
-      // check_valid_address(f->esp + 24, f->esp);
-      // check_valid_address(f->esp + 28, f->esp);
       check_valid_string((void *)*(uint32_t *)(f->esp + 24), f->esp);
       f->eax = write((int)*(uint32_t *)(f->esp+20), (void *)*(uint32_t *)(f->esp + 24), (unsigned)*((uint32_t *)(f->esp + 28)));
       break;
