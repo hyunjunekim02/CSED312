@@ -105,9 +105,9 @@ check_valid_buffer (void* buffer, unsigned size, void* esp, bool to_write)
     if (to_write == true && vme->writable == false) {
       exit(-1);
     }
-    if (to_write == false && vme->writable == true) {
-      exit(-1);
-    }
+    // if (to_write == false && vme->writable == true) {
+    //   exit(-1);
+    // }
   }
 }
 
