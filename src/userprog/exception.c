@@ -165,12 +165,12 @@ page_fault (struct intr_frame *f)
       exit(-1);
    }
 
-   if(write){
+   if (write) {
       struct vm_entry *vme = find_vme(fault_addr);
       if (vme == NULL) {
          exit(-1);
       }
-      if(vme->writable == false){
+      if (vme->writable == false) {
          exit(-1);
       }
    }

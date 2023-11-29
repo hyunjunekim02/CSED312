@@ -431,7 +431,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
  done:
   /* We arrive here whether the load is successful or not. */
-  //file_close (file);  // file 닫지 말아야 접근 가능
+  file_close (file);  // file 닫지 말아야 접근 가능
   return success;
 }
 
@@ -536,6 +536,8 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       //     return false; 
       //   }
 
+      struct file *_file = file_reopen(file);
+
       struct vm_entry *vme = malloc(sizeof(struct vm_entry));
       if (vme == NULL) {
         return false;
@@ -548,7 +550,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       vme->read_bytes = page_read_bytes;
       vme->zero_bytes = page_zero_bytes;
       vme->swap_slot = 0;
-      vme->file = file;
+      vme->file = _file;
       insert_vme(&(thread_current()->vm_table), vme);
       // mmap_elem에 넣는 것도 필요함
 

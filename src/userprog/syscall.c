@@ -92,7 +92,8 @@ syscall_handler (struct intr_frame *f UNUSED)
     case SYS_CREATE:
       check_valid_address(f->esp + 16, f->esp);
       check_valid_address(f->esp + 20, f->esp);
-      f->eax = create((const char *)*(uint32_t *)(f->esp + 16), (unsigned)*(uint32_t *)(f->esp + 20));
+      bool is_created = create((const char *)*(uint32_t *)(f->esp + 16), (unsigned)*(uint32_t *)(f->esp + 20));
+      f->eax = is_created;
       break;
     case SYS_REMOVE:
       check_valid_address(f->esp + 4, f->esp);
@@ -101,7 +102,8 @@ syscall_handler (struct intr_frame *f UNUSED)
     case SYS_OPEN:
       check_valid_address(f->esp + 4, f->esp);
       // check_valid_buffer((void *)*(uint32_t *)(f->esp + 4), strlen((char *)*(uint32_t *)(f->esp + 4)) + 1, f->esp, false);
-      f->eax = open((const char*)*(uint32_t *)(f->esp + 4));
+      int fd = open((const char*)*(uint32_t *)(f->esp + 4));
+      f->eax = fd;
       break;
     case SYS_FILESIZE:
       check_valid_address(f->esp + 4, f->esp);
