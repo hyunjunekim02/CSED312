@@ -204,7 +204,7 @@ int open (const char *file) {
     cur->pcb->fdt[cur->pcb->next_fd] = f;
     cur->pcb->next_fd++;
     lock_release (&filesys_lock);
-    return cur->pcb->next_fd-1; //-1 or not?
+    return cur->pcb->next_fd-1;
   }
 }
 
