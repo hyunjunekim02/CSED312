@@ -384,11 +384,8 @@ munmap (mapid_t mapping)
   if (mapping == -999) {
     while (!list_empty(&cur->mmap_list)) {
       mmap_file = list_entry(list_pop_front(&cur->mmap_list), struct mmap_file, elem);
-      list_remove (&mmap_file->elem);
-      free (mmap_file);
+      do_munmap(mmap_file);
     }
-    
-    // free (cur->mmap_list);
     return;
   }
 
@@ -420,9 +417,9 @@ do_munmap(struct mmap_file *mmap_file)
     if (vme->is_loaded == true) {
       addr = pagedir_get_page(cur->pagedir, vme->vaddr);
 
-      if (pagedir_is_dirty(cur->pagedir, vme->vaddr) == true) {
+      if (pagedir_is_dirty(cur->pagedir, addr) == true) {
         lock_acquire(&filesys_lock);
-        file_write_at(vme->file, vme->vaddr, vme->read_bytes, vme->offset);
+        file_write_at(vme->file, addr, vme->read_bytes, vme->offset);
         lock_release(&filesys_lock);
       }
     }
