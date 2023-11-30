@@ -15,7 +15,6 @@
 #define	USER_VADDR_BOTTOM ((void *) 0x08048000)
 
 typedef int pid_t;
-typedef int mapid_t;
 
 /* prevent race condition */
 struct lock filesys_lock;
@@ -131,6 +130,15 @@ syscall_handler (struct intr_frame *f UNUSED)
     case SYS_CLOSE:
       check_valid_address(f->esp + 4, f->esp);
       close((int)*(uint32_t *)(f->esp + 4));
+      break;
+    case SYS_MMAP:
+      check_valid_address(f->esp + 16, f->esp);
+      check_valid_address(f->esp + 20, f->esp);
+      f->eax = mmap((int)*(uint32_t *)(f->esp + 16), (void *)*(uint32_t *)(f->esp + 20));
+      break;
+    case SYS_MUNMAP:
+      check_valid_address(f->esp + 4, f->esp);
+      munmap((int)*(uint32_t *)(f->esp + 4));
       break;
     default:
       printf("default\n");
@@ -311,44 +319,107 @@ void process_close_file(int fd) {
 
 mapid_t
 mmap (int fd, void *addr) {
-    // todo:
-    // 1. 파일 디스크립터(fd) 유효성 검사
-    //    - 파일 길이가 0이면 실패 처리
-    //    - 파일 디스크립터가 콘솔(0, 1)이면 실패 처리
+  struct mmap_file *mmap_file;
+  size_t offset = 0;
+  struct thread *cur = thread_current();
 
-    // 2. 주소(addr) 유효성 검사
-    //    - addr가 페이지 정렬되지 않았거나 0이면 실패 처리
-    //    - 매핑될 페이지 범위가 기존 매핑된 페이지와 겹치면 실패 처리
+  if(is_user_vaddr(addr) == false || addr ==0|| pg_ofs(addr)!=0){
+    return -1;
+  }
 
-    // 3. 파일 매핑
-    //    - 파일을 가상 주소 공간에 매핑
-    //    - 지연 로딩 구현: 페이지가 실제로 필요할 때까지 로드 지연
+  mmap_file = (struct mmap_file *)malloc(sizeof(struct mmap_file));
+  if(mmap_file == NULL){
+    return -1;
+  }
 
-    // 4. 매핑 ID 생성 및 반환
-    //    - 성공 시, 고유 매핑 ID 반환
-    //    - 실패 시, -1 반환
+  memset(mmap_file, 0, sizeof(struct mmap_file));
+  list_init (&mmap_file->vme_list);
+  mmap_file->file = process_get_file(fd);
+  if(mmap_file->file == NULL){
+    return -1;
+  }
 
-    // 예외 처리 및 실패 조건에 따른 반환
+  mmap_file->file = file_reopen(mmap_file->file);
+  mmap_file->map_id = cur->pcb->next_fd++;
+  list_push_back (&cur->mmap_list, &mmap_file->elem);
+
+  int length = file_length (mmap_file -> file);
+  while (length > 0){
+
+    if (find_vme (addr)){
+      return -1;
+    }
+    
+    struct vm_entry *vme = malloc (sizeof(struct vm_entry));
+    memset (vme, 0, sizeof(struct vm_entry));
+
+    vme->type = VM_FILE;
+    vme->vaddr = addr;
+    vme->writable = true;
+    vme->is_loaded = true;
+    vme->offset = offset;
+    vme->read_bytes = length < PGSIZE ? length : PGSIZE;
+    vme->zero_bytes = 0;
+    vme->swap_slot = 0;
+    vme->file = mmap_file->file;
+
+    list_push_back(&mmap_file->vme_list, &vme->mmap_elem);
+    insert_vme(&cur->vm_table, vme);
+    addr += PGSIZE;
+    offset += PGSIZE;
+    length -= PGSIZE;
+  }
+
+  return mmap_file->map_id;
 }
 
 void
 munmap(mapid_t mapping) {
-    // todo:
-    // 1. 매핑 ID(mapping) 유효성 검사
-    //    - 유효하지 않은 ID면 함수 종료
+  struct list_elem *e;
+  struct thread *cur = thread_current();
+  struct mmap_file *mmap_file = NULL;
 
-    // 2. 매핑 해제
-    //    - 매핑된 페이지들을 가상 주소 공간에서 제거
-    //    - 프로세스가 작성한 페이지는 파일로 쓰기 백
-    //    - 변경되지 않은 페이지는 쓰기 백하지 않음
+  for (e = list_begin(&cur->mmap_list); e != list_end(&cur->mmap_list); e = list_next(e)){
+    struct mmap_file *f = list_entry(e, struct mmap_file, elem);
+    if(mapping == f->map_id){
+      mmap_file = f;
+    }
+  }
+  
+  if (mmap_file == NULL){
+    return;
+  }
 
-    // 3. 매핑된 페이지 리스트 정리
-    //    - 매핑과 관련된 내부 데이터 구조 정리
-
-    // 매핑 해제 처리
+  do_munmap(mmap_file);
 }
 
 void
 do_munmap(struct mmap_file *mmap_file) {
-  
+  struct list_elem *e;
+  struct thread *cur = thread_current();
+  void *addr;
+
+  for (e = list_begin (&mmap_file->vme_list); e != list_end (&mmap_file->vme_list); list_next(e)){
+    struct vm_entry *vme = list_entry (e, struct vm_entry, mmap_elem);
+    struct list_elem *temp;
+
+    if(vme->is_loaded == true){
+      addr = pagedir_get_page(cur->pagedir, vme->vaddr);
+      
+      if(pagedir_is_dirty(cur->pagedir, vme->vaddr) == true){
+        lock_acquire(&filesys_lock);
+        file_write_at(vme->file, vme->vaddr, vme->read_bytes, vme->offset);
+        lock_release(&filesys_lock);
+      }
+    }
+
+    vme->is_loaded = false;
+    temp = list_prev(e);
+    list_remove(e);
+    e = temp;
+    delete_vme(&cur->vm_table, vme);
+  }
+
+  list_remove (&mmap_file->elem);
+  free (mmap_file);
 }
