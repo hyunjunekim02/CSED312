@@ -382,10 +382,12 @@ munmap (mapid_t mapping)
   struct mmap_file *mmap_file = NULL;
 
   if (mapping == -999) {
-    for (e = list_begin (&cur->mmap_list); e != list_end (&cur->mmap_list);) {
-      mmap_file = list_entry(e, struct mmap_file, elem);
+    while (!list_empty(&cur->mmap_list)) {
+      mmap_file = list_entry(list_pop_front(&cur->mmap_list), struct mmap_file, elem);
       do_munmap(mmap_file);
     }
+    
+    // free (cur->mmap_list);
     return;
   }
 
