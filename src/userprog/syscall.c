@@ -417,9 +417,9 @@ do_munmap(struct mmap_file *mmap_file)
     if (vme->is_loaded == true) {
       addr = pagedir_get_page(cur->pagedir, vme->vaddr);
 
-      if (pagedir_is_dirty(cur->pagedir, addr) == true) {
+      if (pagedir_is_dirty(cur->pagedir, vme->vaddr) == true) {
         lock_acquire(&filesys_lock);
-        file_write_at(vme->file, addr, vme->read_bytes, vme->offset);
+        file_write_at(vme->file, vme->vaddr, vme->read_bytes, vme->offset);
         lock_release(&filesys_lock);
       }
     }
