@@ -384,7 +384,8 @@ munmap (mapid_t mapping)
   if (mapping == -999) {
     while (!list_empty(&cur->mmap_list)) {
       mmap_file = list_entry(list_pop_front(&cur->mmap_list), struct mmap_file, elem);
-      do_munmap(mmap_file);
+      list_remove (&mmap_file->elem);
+      free (mmap_file);
     }
     
     // free (cur->mmap_list);
