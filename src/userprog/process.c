@@ -168,7 +168,7 @@ process_exit (void)
   palloc_free_multiple(cur->pcb->fdt, 3);
 
   /* vm table destroy */
-  munmap(-999);
+  munmap(CLOSE_ALL);
   vm_destroy(&(cur->vm_table));
 
   /* Destroy the current process's page directory and switch back

@@ -3,6 +3,8 @@
 
 #include "vm/page.h"
 
+#define CLOSE_ALL -999
+
 typedef int mapid_t;
 
 void syscall_init (void);

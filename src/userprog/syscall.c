@@ -381,7 +381,7 @@ munmap (mapid_t mapping)
   struct thread *cur = thread_current();
   struct mmap_file *mmap_file = NULL;
 
-  if (mapping == -999) {
+  if (mapping == CLOSE_ALL) {
     while (!list_empty(&cur->mmap_list)) {
       mmap_file = list_entry(list_pop_front(&cur->mmap_list), struct mmap_file, elem);
       do_munmap(mmap_file);
@@ -423,6 +423,9 @@ do_munmap(struct mmap_file *mmap_file)
         lock_release(&filesys_lock);
       }
     }
+
+    pagedir_clear_page(cur->pagedir, vme->vaddr);
+    palloc_free_page(addr);
 
     vme->is_loaded = false;
     e = list_remove(e);
