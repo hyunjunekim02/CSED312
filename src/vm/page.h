@@ -25,6 +25,13 @@ struct vm_entry {
   struct hash_elem elem;
 };
 
+struct mmap_file {
+  int map_id;
+  struct file *file;
+  struct list_elem elem;
+  struct list vme_list;
+};
+
 /* 아직 쓰인바 없음 */
 struct frame_entry {
     void *physical_address_ptr;         // 페이지의 실제 주소를 가리키는 포인터
