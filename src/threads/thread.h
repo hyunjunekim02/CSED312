@@ -141,6 +141,7 @@ struct thread
     
     /* Virtual Memory */
     struct hash vm_table;
+    struct list mmap_list;
 
     /* wake up time used in priority scheduling*/
     int64_t wakeup_time;

@@ -633,12 +633,12 @@ handle_mm_fault (struct vm_entry *vme)
         return false;
       }
       break;
-    // case VM_FILE:
-    //   if (load_file(kpage, vme) == false) {
-    //     palloc_free_page(kpage);
-    //     return false;
-    //   }
-    //   break;
+    case VM_FILE:
+      if (load_file(kpage, vme) == false) {
+        palloc_free_page(kpage);
+        return false;
+      }
+      break;
     // case VM_ANON:
     //   break;
     // case VM_STACK:
