@@ -8,6 +8,7 @@
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
 #include "userprog/tss.h"
+#include "userprog/syscall.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
@@ -168,6 +169,7 @@ process_exit (void)
 
   /* vm table destroy */
   vm_destroy(&(cur->vm_table));
+  munmap(-999);
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */

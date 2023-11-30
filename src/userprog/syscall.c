@@ -318,17 +318,18 @@ void process_close_file(int fd) {
 }
 
 mapid_t
-mmap (int fd, void *addr) {
+mmap (int fd, void *addr)
+{
   struct mmap_file *mmap_file;
   size_t offset = 0;
   struct thread *cur = thread_current();
 
-  if(is_user_vaddr(addr) == false || addr ==0|| pg_ofs(addr)!=0){
+  if (is_user_vaddr(addr) == false || addr ==0 || pg_ofs(addr) != 0) {
     return -1;
   }
 
-  mmap_file = (struct mmap_file *)malloc(sizeof(struct mmap_file));
-  if(mmap_file == NULL){
+  mmap_file = malloc(sizeof(struct mmap_file));
+  if (mmap_file == NULL) {
     return -1;
   }
 
@@ -344,9 +345,8 @@ mmap (int fd, void *addr) {
   list_push_back (&cur->mmap_list, &mmap_file->elem);
 
   int length = file_length (mmap_file -> file);
-  while (length > 0){
-
-    if (find_vme (addr)){
+  while (length > 0) {
+    if (find_vme (addr)) {
       return -1;
     }
     
@@ -365,6 +365,7 @@ mmap (int fd, void *addr) {
 
     list_push_back(&mmap_file->vme_list, &vme->mmap_elem);
     insert_vme(&cur->vm_table, vme);
+
     addr += PGSIZE;
     offset += PGSIZE;
     length -= PGSIZE;
@@ -374,12 +375,21 @@ mmap (int fd, void *addr) {
 }
 
 void
-munmap(mapid_t mapping) {
+munmap (mapid_t mapping)
+{
   struct list_elem *e;
   struct thread *cur = thread_current();
   struct mmap_file *mmap_file = NULL;
 
-  for (e = list_begin(&cur->mmap_list); e != list_end(&cur->mmap_list); e = list_next(e)){
+  if (mapping == -999) {
+    for (e = list_begin (&cur->mmap_list); e != list_end (&cur->mmap_list);) {
+      mmap_file = list_entry(e, struct mmap_file, elem);
+      do_munmap(mmap_file);
+    }
+    return;
+  }
+
+  for (e = list_begin(&cur->mmap_list); e != list_end(&cur->mmap_list); e = list_next(e)) {
     struct mmap_file *f = list_entry(e, struct mmap_file, elem);
     if(mapping == f->map_id){
       mmap_file = f;
@@ -394,19 +404,20 @@ munmap(mapid_t mapping) {
 }
 
 void
-do_munmap(struct mmap_file *mmap_file) {
+do_munmap(struct mmap_file *mmap_file)
+{
   struct list_elem *e;
   struct thread *cur = thread_current();
   void *addr;
 
-  for (e = list_begin (&mmap_file->vme_list); e != list_end (&mmap_file->vme_list);/*list_next(e)*/){
+  for (e = list_begin (&mmap_file->vme_list); e != list_end (&mmap_file->vme_list);/*list_next(e)*/) {
     struct vm_entry *vme = list_entry (e, struct vm_entry, mmap_elem);
     struct list_elem *temp;
 
-    if(vme->is_loaded == true){
+    if (vme->is_loaded == true) {
       addr = pagedir_get_page(cur->pagedir, vme->vaddr);
 
-      if(pagedir_is_dirty(cur->pagedir, vme->vaddr) == true){
+      if (pagedir_is_dirty(cur->pagedir, vme->vaddr) == true) {
         lock_acquire(&filesys_lock);
         file_write_at(vme->file, vme->vaddr, vme->read_bytes, vme->offset);
         lock_release(&filesys_lock);
