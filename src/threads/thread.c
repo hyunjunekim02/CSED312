@@ -235,6 +235,9 @@ thread_create (const char *name, int priority,
   t->executable = NULL;
   list_push_back(&(t->parent_process->child_process_list), &(t->child_process_elem));
 
+  /* mmap_table init */
+  list_init(&t->mmap_list);
+
   /* Add to run queue. */
   thread_unblock (t);
   thread_preemption();
