@@ -1,58 +1,52 @@
-#include "userprog/process.h"
-#include <debug.h>
-#include <inttypes.h>
-#include <round.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "userprog/gdt.h"
-#include "userprog/pagedir.h"
-#include "userprog/tss.h"
-#include "filesys/directory.h"
-#include "filesys/file.h"
-#include "filesys/filesys.h"
-#include "threads/flags.h"
-#include "threads/init.h"
-#include "threads/interrupt.h"
-#include "threads/palloc.h"
-#include "threads/thread.h"
-#include "threads/vaddr.h"
-#include "threads/malloc.h"
-#include "vm/page.h"
-#include "lib/kernel/bitmap.h"
+#include "vm/swap.h"
+#include <bitmap.h>
+#include "threads/synch.h"
 #include "devices/block.h"
+#include "threads/vaddr.h"
+#include "threads/interrupt.h"
 
-struct block *swap_block;
+struct lock swap_lock;
 struct bitmap *swap_bitmap;
 
-void swap_init(void) {
-    swap_block = block_get_role(BLOCK_SWAP);
-    if (swap_block == NULL) {
-        return NULL;
-    }
-    swap_bitmap = bitmap_create(block_size(swap_block) / SECTORS_PER_PAGE);
-    if (swap_bitmap == NULL) {
-        return NULL;
-    }
-    bitmap_set_all(swap_bitmap, false);
+void
+swap_init (size_t size)
+{
+  lock_init (&swap_lock);
+  swap_bitmap = bitmap_create (size);
 }
 
-size_t swap_out(void *kaddr) {
-    size_t free_index = bitmap_scan_and_flip(swap_bitmap, 0, 1, false);
-    if (free_index == BITMAP_ERROR) {
-        return NULL;
-    }
+void
+swap_in (size_t used_index, void *kaddr)
+{
+  struct block *swap_block;
+  swap_block = block_get_role (BLOCK_SWAP);
+  used_index--;
 
-    for (int i = 0; i < SECTORS_PER_PAGE; ++i) {
-        block_write(swap_block, free_index * SECTORS_PER_PAGE + i, kaddr + i * BLOCK_SECTOR_SIZE);
-    }
-    return free_index;
+  lock_acquire (&swap_lock);
+  used_index <<= 3;
+  for (int i = 0; i < 8; i++){
+    block_read (swap_block, used_index + i, kaddr + BLOCK_SECTOR_SIZE * i);
+  }
+  used_index >>= 3;
+  bitmap_set_multiple (swap_bitmap, used_index, 1, false);
+  lock_release (&swap_lock);
 }
 
+size_t
+swap_out (void *kaddr)
+{
+  struct block *swap_block;
+  size_t swap_index;
+  swap_block = block_get_role (BLOCK_SWAP);
 
-void swap_in(size_t used_index, void *kaddr) {
-    for (int i = 0; i < SECTORS_PER_PAGE; ++i) {
-        block_read(swap_block, used_index * SECTORS_PER_PAGE + i, kaddr + i * BLOCK_SECTOR_SIZE);
-    }
-    bitmap_set(swap_bitmap, used_index, false);
+  lock_acquire (&swap_lock);
+  swap_index = bitmap_scan_and_flip (swap_bitmap, 0, 1, false);
+  swap_index <<= 3;
+  for (int i = 0; i < 8; i++){
+    block_write (swap_block, swap_index + i, kaddr + BLOCK_SECTOR_SIZE * i);
+  }
+  swap_index >>= 3;
+  lock_release (&swap_lock);
+
+  return swap_index + 1;
 }
