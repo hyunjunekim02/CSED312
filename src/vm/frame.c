@@ -7,26 +7,36 @@ void ft_init(void) {
     list_init(&frame_table);
 }
 
-void insert_fte_to_ft(struct frame_entry *ft_entry) {
+void add_frame_to_frame_table(struct frame_entry *ft_entry) {
     list_push_back(&frame_table, &ft_entry->ft_elem);
 }
 
-void remove_fte_from_ft(struct frame_entry *ft_entry) {
+void delete_frame_from_frame_table(struct frame_entry *ft_entry) {
     list_remove(&ft_entry->ft_elem);
 }
 
-struct frame_entry *alloc_fte(void *kaddr, struct vm_entry *vme) {
-    struct frame_entry *fte = (struct frame_entry *)malloc(sizeof(struct frame_entry));
-    fte->kaddr = kaddr;
-    fte->vme = vme;
-    fte->owner_thread = thread_current();
-    insert_fte_to_ft(fte);
+struct frame_entry *alloc_frame(enum palloc_flags flags, struct vm_entry *vme) {
+    void *kaddr = palloc_get_page(flags);
+    if (kaddr == NULL) {
+        kaddr = try_to_free_pages(flags);
+        if (kaddr == NULL) {
+            return NULL;
+        }
+    }
+    struct frame_entry *fte = alloc_fte(kaddr, vme);
     return fte;
 }
 
-void free_fte(struct frame_entry *fte) {
-    remove_fte_from_ft(fte);
-    free(fte);
+void free_frame(void *kaddr){
+
+}
+
+void __free_frame(struct page* page){
+
+}
+
+static struct list_elem* get_next_lru_clock(){
+    
 }
 
 struct frame_entry *try_to_free_pages(enum palloc_flags flags) {
@@ -57,18 +67,6 @@ struct frame_entry *try_to_free_pages(enum palloc_flags flags) {
         }
     }
     return NULL;
-}
-
-struct frame_entry *alloc_frame(enum palloc_flags flags, struct vm_entry *vme) {
-    void *kaddr = palloc_get_page(flags);
-    if (kaddr == NULL) {
-        kaddr = try_to_free_pages(flags);
-        if (kaddr == NULL) {
-            return NULL;
-        }
-    }
-    struct frame_entry *fte = alloc_fte(kaddr, vme);
-    return fte;
 }
 
 struct frame_entry *lru_clock_algorithm(void) {
