@@ -6,8 +6,6 @@
 #include "filesys/file.h"
 #include "vm/page.h"
 
-struct list frame_table;
-
 struct frame_entry {
     void *kaddr;                        // 페이지의 실제 주소를 가리키는 포인터
     struct vm_entry *vme;               // 해당 페이지에 매핑되는 vm_entry를 가리키는 포인터

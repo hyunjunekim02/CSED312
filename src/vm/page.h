@@ -44,35 +44,6 @@ bool load_file (void *kaddr, struct vm_entry *vme);
 void check_valid_buffer (void* buffer, unsigned size, void* esp, bool to_write);
 void check_valid_string (const void *str, void *esp);
 
-// bool load_page (void *fault_addr);
-
-
-// void lru_list_init(void) {
-//     list_init(&lru_list);
-// }
-
-// void add_page_to_lru_list(struct page *page) {
-//     list_push_back(&lru_list, &page->lru_elem);
-// }
-
-// void remove_page_from_lru_list(struct page *page) {
-//     list_remove(&page->lru_elem);
-// }
-
-// struct page *lru_clock_algorithm(void) {
-//     struct list_elem *e;
-//     for (e = list_begin(&lru_list); e != list_end(&lru_list); e = list_next(e)) {
-//         struct page *page = list_entry(e, struct page, lru_elem);
-//         if (/* 교체 정책에 해당하는 page인지 확인 */) {
-//             return page;
-//         }
-//     }
-//     return NULL;
-// }
-
-
-
-
 // // 사용자 모드에서 커널 모드로 전환 시
 // void switch_to_kernel_mode(struct intr_frame *f) {
 //     struct thread *current_thread = thread_current();
@@ -110,12 +81,8 @@ void check_valid_string (const void *str, void *esp);
 //     return false;
 // }
 
-
-
-
 // #include <stdbool.h>
 // #include <stdint.h>
-
 
 // bool expand_stack(void* addr) {
 
@@ -151,10 +118,5 @@ void check_valid_string (const void *str, void *esp);
 //     return fault_addr >= esp - STACK_HEURISTIC && fault_addr < PHYS_BASE
 //            && (PHYS_BASE - fault_addr) <= MAX_STACK_SIZE;
 // }
-
-
-
-
-
 
 #endif /* vm/page.h */
