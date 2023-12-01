@@ -18,7 +18,7 @@ vm_init (struct hash *vm_table)
 {
   bool success = hash_init(vm_table, vm_hash_func, vm_less_func, NULL);
   if (!success) {
-    PANIC("vm_init failed 어케 처리할지는 아직 잘 모르겠음");
+    PANIC("vm_init failed 관련 invarient");
   }
 }
 
