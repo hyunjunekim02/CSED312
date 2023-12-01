@@ -38,11 +38,9 @@ alloc_frame (enum palloc_flags flags)
   frame->owner_thread = thread_current ();
   frame->kaddr = palloc_get_page (flags);
 
-  if (frame->kaddr == NULL){
-    bool success = false;
-    while (!success){
-        success = try_to_free_frames(flags);
-    }
+  while (frame->kaddr == NULL){
+    lru_clock_algorithm(flags);
+    frame->kaddr = palloc_get_page(flags);
   }
 
   add_frame_to_frame_table(frame);
