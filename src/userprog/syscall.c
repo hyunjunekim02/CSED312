@@ -11,6 +11,7 @@
 #include "filesys/file.h"
 #include "devices/input.h"
 #include "vm/page.h"
+#include "vm/frame.h"
 
 #define	USER_VADDR_BOTTOM ((void *) 0x08048000)
 
@@ -425,7 +426,7 @@ do_munmap(struct mmap_file *mmap_file)
     }
 
     pagedir_clear_page(cur->pagedir, vme->vaddr);
-    palloc_free_page(addr);
+    free_frame(addr);
 
     vme->is_loaded = false;
     e = list_remove(e);

@@ -638,14 +638,14 @@ handle_mm_fault (struct vm_entry *vme)
     case VM_BIN:
       if (load_file(new_frame->kaddr, vme) == false) {
         // palloc_free_page(kpage);
-        free_page(new_frame->kaddr);
+        free_frame(new_frame->kaddr);
         return false;
       }
       break;
     case VM_FILE:
       if (load_file(frame->kaddr, vme) == false) {
         // palloc_free_page(kpage);
-        free_page(new_frame->kaddr);
+        free_frame(new_frame->kaddr);
         return false;
       }
       break;
@@ -656,13 +656,13 @@ handle_mm_fault (struct vm_entry *vme)
     //   break;
     default:
       //palloc_free_page(kpage);
-      free_page(new_frame->kaddr);
+      free_frame(new_frame->kaddr);
       return false;
   }
   
   if (install_page(vme->vaddr, new_frame->kaddr, vme->writable) == false) {
     // palloc_free_page(kpage);
-    free_page(new_frame->kaddr);
+    free_frame(new_frame->kaddr);
     return false;
   }
   
