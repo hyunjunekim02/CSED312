@@ -572,7 +572,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 static bool
 setup_stack (void **esp) 
 {
-  struct frame kpage;
+  struct frame *kpage;
   bool success = false;
 
   kpage = alloc_frame (PAL_USER | PAL_ZERO);
@@ -626,7 +626,7 @@ install_page (void *upage, void *kpage, bool writable)
 bool
 handle_mm_fault (struct vm_entry *vme)
 {
-  struct frame new_frame = alloc_frame(PAL_USER);
+  struct frame *new_frame = alloc_frame(PAL_USER);
   new_frame->vme = vme;
 
   // uint8_t *kpage = palloc_get_page(PAL_USER);
@@ -643,7 +643,7 @@ handle_mm_fault (struct vm_entry *vme)
       }
       break;
     case VM_FILE:
-      if (load_file(frame->kaddr, vme) == false) {
+      if (load_file(new_frame->kaddr, vme) == false) {
         // palloc_free_page(kpage);
         free_frame(new_frame->kaddr);
         return false;
