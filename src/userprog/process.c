@@ -590,7 +590,7 @@ setup_stack (void **esp)
     return false;
   }
   kpage->vme = vme;
-  vme->type = VM_BIN; //ANON으로 바꾸기?
+  vme->type = VM_ANON;
   vme->vaddr = ((uint8_t *) PHYS_BASE) - PGSIZE;
   vme->writable = true;
   vme->is_loaded = true;
@@ -629,22 +629,19 @@ handle_mm_fault (struct vm_entry *vme)
   struct frame *new_frame = alloc_frame(PAL_USER);
   new_frame->vme = vme;
 
-  // uint8_t *kpage = palloc_get_page(PAL_USER);
-  if (new_frame->kaddr == NULL) { //kpage를 모두 frame->kaddr로 교체
+  if (new_frame->kaddr == NULL) {
     return false;
   }
 
   switch (vme->type) {
     case VM_BIN:
       if (load_file(new_frame->kaddr, vme) == false) {
-        // palloc_free_page(kpage);
         free_frame(new_frame->kaddr);
         return false;
       }
       break;
     case VM_FILE:
       if (load_file(new_frame->kaddr, vme) == false) {
-        // palloc_free_page(kpage);
         free_frame(new_frame->kaddr);
         return false;
       }
@@ -655,13 +652,11 @@ handle_mm_fault (struct vm_entry *vme)
     // case VM_STACK:
     //   break;
     default:
-      //palloc_free_page(kpage);
       free_frame(new_frame->kaddr);
       return false;
   }
   
   if (install_page(vme->vaddr, new_frame->kaddr, vme->writable) == false) {
-    // palloc_free_page(kpage);
     free_frame(new_frame->kaddr);
     return false;
   }
