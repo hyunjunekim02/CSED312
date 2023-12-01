@@ -72,7 +72,7 @@ __free_frame(struct frame* frame)
 }
 
 static struct list_elem*
-find_next_victim(void) {
+find_victim(void) {
     struct list_elem *victim;
     for (victim = list_begin(&frame_table); victim != list_end(&frame_table); victim = list_next(victim)) {
         struct frame *f = list_entry(victim, struct frame, ft_elem);
@@ -88,22 +88,23 @@ find_next_victim(void) {
     return NULL;
 }
 
-struct frame *
+void
 lru_clock_algorithm(enum palloc_flags flags) {
-    struct list_elem *victim_elem = find_next_victim();
-    struct frame *victim_frame = list_entry(victim_elem, struct frame, ft_elem);
+    struct frame *victim_frame = list_entry(find_victim(), struct frame, ft_elem);
     struct thread *victim_thread = victim_frame->owner_thread;
     struct vm_entry *victim_vme = victim_frame->vme;
 
-    if (victim_vme->type == VM_ANON) {
-        swap_out(victim_frame->kaddr);
-    } else if (victim_vme->type == VM_FILE) {
-        if (pagedir_is_dirty(victim_thread->pagedir, victim_vme->vaddr)) {
-            victim_vme->swap_slot = swap_out(victim_vme);
-        }
-        file_write_at(victim_vme->file, victim_page->vaddr, victim_page->read_bytes, victim_page->offset);
-    } else {
-        PANIC("lru_clock_algorithm: victim_page->type is not VM_ANON or VM_FILE");
+    if (victim_vme->type == VM_BIN || victim_vme->type == VM_ANON) {
+      swap_out(victim_frame->kaddr);
+    }
+    else if (victim_vme->type == VM_FILE) {
+      if (pagedir_is_dirty(victim_thread->pagedir, victim_vme->vaddr)) {
+        victim_vme->swap_slot = swap_out(victim_vme);
+      }
+      file_write_at(victim_vme->file, victim_page->vaddr, victim_page->read_bytes, victim_page->offset);
+    }
+    else {
+      PANIC("lru_clock_algorithm: victim_page->type is not VM_ANON or VM_FILE");
     }
 
     pagedir_clear_page(victim_thread->pagedir, victim_vme->vaddr);
@@ -111,5 +112,5 @@ lru_clock_algorithm(enum palloc_flags flags) {
     palloc_free_page(victim_frame->kaddr);
     free(victim_frame);
 
-    return alloc_frame(flags);
+    alloc_frame(flags);
 }

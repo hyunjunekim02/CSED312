@@ -18,7 +18,6 @@ void add_frame_to_frame_table(struct frame *frame);
 void del_frame_from_frame_table(struct frame *frame);
 struct frame *alloc_frame (enum palloc_flags flags);
 void free_frame(void *kaddr);
-void __free_frame(struct frame* frame);
 
 //get_next_lru_clock
 //try_to_free
