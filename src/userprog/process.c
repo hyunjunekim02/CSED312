@@ -20,6 +20,8 @@
 #include "threads/vaddr.h"
 #include "threads/malloc.h"
 #include "vm/page.h"
+#include "vm/swap.h"
+#include "vm/frame.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -570,24 +572,25 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 static bool
 setup_stack (void **esp) 
 {
-  uint8_t *kpage;
+  struct frame kpage;
   bool success = false;
 
-  kpage = palloc_get_page (PAL_USER | PAL_ZERO);
+  kpage = alloc_frame (PAL_USER | PAL_ZERO);
   if (kpage != NULL) 
     {
-      success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
+      success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage->kaddr, true);
       if (success)
         *esp = PHYS_BASE;
       else
-        palloc_free_page (kpage);
+        free_frame (kpage->kaddr);
     }
   
   struct vm_entry *vme = malloc(sizeof(struct vm_entry));
   if (vme == NULL) {
     return false;
   }
-  vme->type = VM_BIN;
+  kpage->vme = vme;
+  vme->type = VM_BIN; //ANON으로 바꾸기?
   vme->vaddr = ((uint8_t *) PHYS_BASE) - PGSIZE;
   vme->writable = true;
   vme->is_loaded = true;
@@ -623,37 +626,43 @@ install_page (void *upage, void *kpage, bool writable)
 bool
 handle_mm_fault (struct vm_entry *vme)
 {
-  uint8_t *kpage = palloc_get_page(PAL_USER);
-  if (kpage == NULL) {
+  struct frame new_frame = alloc_frame(PAL_USER);
+  new_frame->vme = vme;
+
+  // uint8_t *kpage = palloc_get_page(PAL_USER);
+  if (new_frame->kaddr == NULL) { //kpage를 모두 frame->kaddr로 교체
     return false;
   }
 
   switch (vme->type) {
     case VM_BIN:
-      if (load_file(kpage, vme) == false) {
-        palloc_free_page(kpage);
+      if (load_file(new_frame->kaddr, vme) == false) {
+        // palloc_free_page(kpage);
+        free_page(new_frame->kaddr);
         return false;
       }
       break;
     case VM_FILE:
-      if (load_file(kpage, vme) == false) {
-        palloc_free_page(kpage);
+      if (load_file(frame->kaddr, vme) == false) {
+        // palloc_free_page(kpage);
+        free_page(new_frame->kaddr);
         return false;
       }
       break;
     case VM_ANON:
-      // TODO!
-      // swap in
+      swap_in(vme->swap_slot, new_frame->kaddr);
       break;
     // case VM_STACK:
     //   break;
     default:
-      palloc_free_page(kpage);
+      //palloc_free_page(kpage);
+      free_page(new_frame->kaddr);
       return false;
   }
   
-  if (install_page(vme->vaddr, kpage, vme->writable) == false) {
-    palloc_free_page(kpage);
+  if (install_page(vme->vaddr, new_frame->kaddr, vme->writable) == false) {
+    // palloc_free_page(kpage);
+    free_page(new_frame->kaddr);
     return false;
   }
   
