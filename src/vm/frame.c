@@ -29,7 +29,7 @@ struct frame *
 alloc_frame (enum palloc_flags flags)
 {
   struct frame *frame;
-  frame = (struct frame *)malloc (sizeof (struct frame));
+  frame = (struct frame *) malloc (sizeof (struct frame));
   if (frame == NULL){
     return NULL;
   }
@@ -38,9 +38,8 @@ alloc_frame (enum palloc_flags flags)
   frame->owner_thread = thread_current ();
   frame->kaddr = palloc_get_page (flags);
 
-  while (frame->kaddr == NULL){
-    lru_clock_algorithm(flags);
-    frame->kaddr = palloc_get_page(flags);
+  if (frame->kaddr == NULL) {
+    frame->kaddr = lru_clock_algorithm(flags);
   }
 
   add_frame_to_frame_table(frame);
@@ -56,14 +55,14 @@ free_frame(void *kaddr)
   for (e = list_begin (&frame_table); e != list_end (&frame_table); e = list_next (e)){
     struct frame *temp_frame = list_entry (e, struct frame, ft_elem);
     if (temp_frame->kaddr == kaddr){
-        __free_frame(temp_frame);
+        _free_frame(temp_frame);
         break;
     }
   }
 }
 
 void
-__free_frame(struct frame* frame)
+_free_frame(struct frame* frame)
 {
   pagedir_clear_page (frame->owner_thread->pagedir, frame->vme->vaddr);
   del_frame_from_frame_table(frame);
@@ -74,13 +73,15 @@ __free_frame(struct frame* frame)
 static struct list_elem*
 find_victim(void) {
     struct list_elem *victim;
-    for (victim = list_begin(&frame_table); victim != list_end(&frame_table); victim = list_next(victim)) {
-        struct frame *f = list_entry(victim, struct frame, ft_elem);
-        if (pagedir_is_accessed(f->owner_thread->pagedir, f->vme->vaddr)) {
-            pagedir_set_accessed(f->owner_thread->pagedir, f->vme->vaddr, false);
-        } else {
-            return victim;
-        }
+    while (true) {
+      for (victim = list_begin(&frame_table); victim != list_end(&frame_table); victim = list_next(victim)) {
+          struct frame *f = list_entry(victim, struct frame, ft_elem);
+          if (pagedir_is_accessed(f->owner_thread->pagedir, f->vme->vaddr)) {
+              pagedir_set_accessed(f->owner_thread->pagedir, f->vme->vaddr, false);
+          } else {
+              return victim;
+          }
+      }
     }
     // ASSERT ("무조건 포문 안에서 찾아야되나?");
     // 한 사이클 돌려서 안 찾아졌을 때, 찾아질 때까지 계속 돌려야 하는지는 잘 모르겠음
@@ -88,7 +89,7 @@ find_victim(void) {
     return NULL;
 }
 
-void
+void*
 lru_clock_algorithm(enum palloc_flags flags) {
     struct frame *victim_frame = list_entry(find_victim(), struct frame, ft_elem);
     struct thread *victim_thread = victim_frame->owner_thread;
@@ -104,13 +105,9 @@ lru_clock_algorithm(enum palloc_flags flags) {
       file_write_at(victim_vme->file, victim_page->vaddr, victim_page->read_bytes, victim_page->offset);
     }
     else {
-      PANIC("lru_clock_algorithm: victim_page->type is not VM_ANON or VM_FILE");
+      // ASSERT("lru_clock_algorithm: victim_page->type is not VM_ANON or VM_FILE");
     }
 
-    pagedir_clear_page(victim_thread->pagedir, victim_vme->vaddr);
-    del_frame_from_frame_table(victim_frame);
-    palloc_free_page(victim_frame->kaddr);
-    free(victim_frame);
-
-    alloc_frame(flags);
+    _free_frame(victim_frame);
+    return palloc_get_page(flags);
 }
