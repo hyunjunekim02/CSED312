@@ -37,7 +37,7 @@ alloc_frame (enum palloc_flags flags)
   if (frame->kadrr == NULL){
     bool success = false;
     while (!success){
-        success = try_to_free_pages(flags);
+        success = try_to_free_frames(flags);
     }
   }
 
@@ -73,7 +73,7 @@ static struct list_elem* get_next_lru_clock(void){
     
 }
 
-struct frame *try_to_free_pages(enum palloc_flags flags) {
+struct frame *try_to_free_frames(enum palloc_flags flags) {
     // struct list_elem *e;
     // for (e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e)) {
     //     struct frame *fte = list_entry(e, struct frame, ft_elem);
