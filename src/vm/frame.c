@@ -1,5 +1,9 @@
+#include <debug.h>
+#include "threads/palloc.h"
+#include "userprog/pagedir.h"
 #include "vm/frame.h"
 #include "vm/page.h"
+#include "vm/swap.h"
 
 struct list frame_table;
 
@@ -34,7 +38,7 @@ alloc_frame (enum palloc_flags flags)
   frame->owner_thread = thread_current ();
   frame->kaddr = palloc_get_page (flags);
 
-  if (frame->kadrr == NULL){
+  if (frame->kaddr == NULL){
     bool success = false;
     while (!success){
         success = try_to_free_frames(flags);
@@ -69,47 +73,45 @@ __free_frame(struct frame* frame)
   free(frame);
 }
 
-static struct list_elem* get_next_lru_clock(void){
-    
+static struct list_elem*
+find_next_victim(void) {
+    struct list_elem *victim;
+    for (victim = list_begin(&frame_table); victim != list_end(&frame_table); victim = list_next(victim)) {
+        struct frame *f = list_entry(victim, struct frame, ft_elem);
+        if (pagedir_is_accessed(f->owner_thread->pagedir, f->vme->vaddr)) {
+            pagedir_set_accessed(f->owner_thread->pagedir, f->vme->vaddr, false);
+        } else {
+            return victim;
+        }
+    }
+    // ASSERT ("무조건 포문 안에서 찾아야되나?");
+    // 한 사이클 돌려서 안 찾아졌을 때, 찾아질 때까지 계속 돌려야 하는지는 잘 모르겠음
+    // victim으로 선정되는 페이지는 무조건 프로세스 data seg | stack에 포함되어에 하는 것 같음
+    return NULL;
 }
 
-struct frame *try_to_free_frames(enum palloc_flags flags) {
-    // struct list_elem *e;
-    // for (e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e)) {
-    //     struct frame *fte = list_entry(e, struct frame, ft_elem);
-    //     if (fte->vme->pinned) {
-    //         continue;
-    //     }
-    //     if (fte->vme->is_loaded && !fte->vme->is_pinned) {
-    //         if (pagedir_is_accessed(fte->owner_thread->pagedir, fte->vme->vaddr)) {
-    //             pagedir_set_accessed(fte->owner_thread->pagedir, fte->vme->vaddr, false);
-    //         } else {
-    //             if (pagedir_is_dirty(fte->owner_thread->pagedir, fte->vme->vaddr) || fte->vme->type == VM_ANON) {
-    //                 if (fte->vme->type == VM_FILE) {
-    //                     if (file_write_at(fte->vme->file, fte->kaddr, fte->vme->read_bytes, fte->vme->offset) != fte->vme->read_bytes) {
-    //                         return NULL;
-    //                     }
-    //                 } else if (fte->vme->type == VM_ANON) {
-    //                     fte->vme->swap_slot = swap_out(fte->kaddr);
-    //                     fte->vme->is_loaded = false;
-    //                 }
-    //             }
-    //             pagedir_clear_page(fte->owner_thread->pagedir, fte->vme->vaddr);
-    //             free_fte(fte);
-    //             return fte;
-    //         }
-    //     }
-    // }
-    // return NULL;
-}
+struct frame *
+lru_clock_algorithm(enum palloc_flags flags) {
+    struct list_elem *victim_elem = find_next_victim();
+    struct frame *victim_frame = list_entry(victim_elem, struct frame, ft_elem);
+    struct thread *victim_thread = victim_frame->owner_thread;
+    struct vm_entry *victim_vme = victim_frame->vme;
 
-// struct frame *lru_clock_algorithm(void) {
-//     struct list_elem *e;
-//     for (e = list_begin(&frame_table); e != list_end(&frame_table); e = list_next(e)) {
-//         struct frame *fme = list_entry(e, struct frame, lru_elem);
-//         if (/* 교체 정책에 해당하는 page인지 확인 */) {
-//             return page;
-//         }
-//     }
-//     return NULL;
-// }
+    if (victim_vme->type == VM_ANON) {
+        swap_out(victim_frame->kaddr);
+    } else if (victim_vme->type == VM_FILE) {
+        if (pagedir_is_dirty(victim_thread->pagedir, victim_vme->vaddr)) {
+            victim_vme->swap_slot = swap_out(victim_vme);
+        }
+        file_write_at(victim_vme->file, victim_page->vaddr, victim_page->read_bytes, victim_page->offset);
+    } else {
+        PANIC("lru_clock_algorithm: victim_page->type is not VM_ANON or VM_FILE");
+    }
+
+    pagedir_clear_page(victim_thread->pagedir, victim_vme->vaddr);
+    del_frame_from_frame_table(victim_frame);
+    palloc_free_page(victim_frame->kaddr);
+    free(victim_frame);
+
+    return alloc_frame(flags);
+}

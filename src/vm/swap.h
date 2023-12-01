@@ -3,8 +3,8 @@
 
 #include <stddef.h>
 
-void swap_init (size_t);
-void swap_in (size_t, void *);
-size_t swap_out (void *);
+void swap_init (size_t size);
+void swap_in (size_t used_index, void *kaddr);
+size_t swap_out (void *kaddr);
 
 #endif /* vm/swap.h */
