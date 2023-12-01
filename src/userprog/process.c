@@ -641,8 +641,10 @@ handle_mm_fault (struct vm_entry *vme)
         return false;
       }
       break;
-    // case VM_ANON:
-    //   break;
+    case VM_ANON:
+      // TODO!
+      // swap in
+      break;
     // case VM_STACK:
     //   break;
     default:
