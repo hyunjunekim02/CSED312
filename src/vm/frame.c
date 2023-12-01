@@ -102,7 +102,7 @@ lru_clock_algorithm(enum palloc_flags flags) {
       if (pagedir_is_dirty(victim_thread->pagedir, victim_vme->vaddr)) {
         victim_vme->swap_slot = swap_out(victim_vme);
       }
-      file_write_at(victim_vme->file, victim_frame->kaddr, victim_vme->read_bytes, victim_vme->offset);
+      file_write_at(victim_vme->file, victim_vme->vaddr, victim_vme->read_bytes, victim_vme->offset);
     }
     else {
       // ASSERT("lru_clock_algorithm: victim_page->type is not VM_ANON or VM_FILE");
