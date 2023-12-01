@@ -16,10 +16,8 @@ struct frame {
 void frame_table_init(void);
 void add_frame_to_frame_table(struct frame *frame);
 void del_frame_from_frame_table(struct frame *frame);
-struct frame *alloc_frame (enum palloc_flags flags);
+struct frame *palloc_frame (enum palloc_flags flags);
 void free_frame(void *kaddr);
-
-//get_next_lru_clock
-//try_to_free
+void* lru_clock_algorithm(enum palloc_flags flags);
 
 #endif /* vm/frame.h */

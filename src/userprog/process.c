@@ -81,8 +81,9 @@ start_process (void *file_name_)
   int argc = 0;
   struct thread *cur = thread_current();
 
-  /* Initialize vm_table */
+  /* Initialize vm_table and frame table */
   vm_init(&(cur->vm_table));
+  frame_table_init();
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
@@ -575,7 +576,7 @@ setup_stack (void **esp)
   struct frame *kpage;
   bool success = false;
 
-  kpage = alloc_frame (PAL_USER | PAL_ZERO);
+  kpage = palloc_frame (PAL_USER | PAL_ZERO);
   if (kpage != NULL) 
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage->kaddr, true);
@@ -626,7 +627,7 @@ install_page (void *upage, void *kpage, bool writable)
 bool
 handle_mm_fault (struct vm_entry *vme)
 {
-  struct frame *new_frame = alloc_frame(PAL_USER);
+  struct frame *new_frame = palloc_frame(PAL_USER);
   new_frame->vme = vme;
 
   if (new_frame->kaddr == NULL) {
