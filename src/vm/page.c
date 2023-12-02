@@ -79,7 +79,8 @@ vm_destroy_func (struct hash_elem *e, void *aux UNUSED)
 
   if (vme->is_loaded) {
     // palloc_free_page(vme->vaddr);
-    pagedir_clear_page(pd, vme->vaddr);
+    free_frame(vme->vaddr);
+    // pagedir_clear_page(pd, vme->vaddr);
   }
 
   free(vme);

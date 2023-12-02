@@ -44,7 +44,7 @@ palloc_frame (enum palloc_flags flags)
     frame->kaddr = lru_clock_algorithm(flags);
   }
 
-  add_frame_to_frame_table(frame);
+  // add_frame_to_frame_table(frame);
   return frame;
 }
 
