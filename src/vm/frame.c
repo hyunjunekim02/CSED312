@@ -96,7 +96,10 @@ lru_clock_algorithm(enum palloc_flags flags) {
     struct vm_entry *victim_vme = victim_frame->vme;
 
     if (victim_vme->type == VM_BIN || victim_vme->type == VM_ANON) {
-      swap_out(victim_frame->kaddr);
+      victim_vme->swap_slot = swap_out(victim_frame->kaddr);
+      if (victim_vme->type == VM_BIN){
+        victim_vme->type = VM_ANON;
+      }
     }
     else if (victim_vme->type == VM_FILE) {
       if (pagedir_is_dirty(victim_thread->pagedir, victim_vme->vaddr)) {
