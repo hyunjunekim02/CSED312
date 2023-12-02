@@ -83,7 +83,6 @@ start_process (void *file_name_)
 
   /* Initialize vm_table and frame table */
   vm_init(&(cur->vm_table));
-  frame_table_init();
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);

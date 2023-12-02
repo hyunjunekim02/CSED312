@@ -32,6 +32,7 @@
 #include "tests/threads/tests.h"
 #endif
 #include "vm/swap.h"
+#include "vm/frame.h"
 #ifdef FILESYS
 #include "devices/block.h"
 #include "devices/ide.h"
@@ -117,6 +118,7 @@ main (void)
 #endif
 
   swap_init (8 * 1024);
+  frame_table_init();
 
   /* Start thread scheduler and enable interrupts. */
   thread_start ();
