@@ -6,5 +6,6 @@
 void swap_init (size_t size);
 void swap_in (size_t used_index, void *kaddr);
 size_t swap_out (void *kaddr);
+void swap_clear (size_t used_index);
 
 #endif /* vm/swap.h */

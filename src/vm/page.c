@@ -46,7 +46,13 @@ insert_vme (struct hash *vm, struct vm_entry *vme)
 bool
 delete_vme (struct hash *vm, struct vm_entry *vme)
 {
-  return hash_delete(vm, &vme->elem) != NULL;
+  if (!hash_delete (vm, &vme->elem)){
+    return false;
+  }
+  // free_frame (vme->vaddr);
+  swap_clear (vme->swap_slot);
+  free (vme);
+  return true;
 }
 
 struct vm_entry*
@@ -79,8 +85,9 @@ vm_destroy_func (struct hash_elem *e, void *aux UNUSED)
 
   if (vme->is_loaded) {
     // palloc_free_page(vme->vaddr);
-    free_frame(vme->vaddr);
     // pagedir_clear_page(pd, vme->vaddr);
+    free_frame(vme->vaddr);
+    swap_clear (vme->swap_slot);
   }
 
   free(vme);

@@ -23,11 +23,11 @@ swap_in (size_t used_index, void *kaddr)
   used_index--;
 
   lock_acquire (&swap_lock);
-  used_index <<= 3;
+  used_index = used_index * 8;
   for (int i = 0; i < 8; i++){
     block_read (swap_block, used_index + i, kaddr + BLOCK_SECTOR_SIZE * i);
   }
-  used_index >>= 3;
+  used_index = used_index / 8;
   bitmap_set_multiple (swap_bitmap, used_index, 1, false);
   lock_release (&swap_lock);
 }
@@ -41,12 +41,24 @@ swap_out (void *kaddr)
 
   lock_acquire (&swap_lock);
   swap_index = bitmap_scan_and_flip (swap_bitmap, 0, 1, false);
-  swap_index <<= 3;
+  swap_index = swap_index * 8;
   for (int i = 0; i < 8; i++){
     block_write (swap_block, swap_index + i, kaddr + BLOCK_SECTOR_SIZE * i);
   }
-  swap_index >>= 3;
+  swap_index = swap_index / 8;
   lock_release (&swap_lock);
 
   return swap_index + 1;
+}
+
+void
+swap_clear (size_t used_index)
+{
+  if (used_index == 0){
+    return;
+  }
+  used_index --;
+  lock_acquire (&swap_lock);
+  bitmap_set_multiple (swap_bitmap, used_index, 1, false);
+  lock_release (&swap_lock);
 }

@@ -423,11 +423,9 @@ do_munmap(struct mmap_file *mmap_file)
         file_write_at(vme->file, vme->vaddr, vme->read_bytes, vme->offset);
         lock_release(&filesys_lock);
       }
+      free_frame(addr);
     }
-
-    pagedir_clear_page(cur->pagedir, vme->vaddr);
-    free_frame(addr);
-
+    // pagedir_clear_page(cur->pagedir, vme->vaddr);
     vme->is_loaded = false;
     e = list_remove(e);
     delete_vme(&cur->vm_table, vme);
