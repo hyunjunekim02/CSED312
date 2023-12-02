@@ -25,6 +25,7 @@
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
+extern struct lock filesys_lock;
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -342,13 +343,16 @@ load (const char *file_name, void (**eip) (void), void **esp)
     goto done;
   process_activate ();
 
+  lock_acquire(&filesys_lock);
   /* Open executable file. */
   file = filesys_open (file_name);
   if (file == NULL) 
     {
+      lock_release(&filesys_lock);
       printf ("load: %s: open failed\n", file_name);
       goto done; 
     }
+  lock_release(&filesys_lock);
 
   /* Read and verify executable header. */
   if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
@@ -634,6 +638,8 @@ handle_mm_fault (struct vm_entry *vme)
     return false;
   }
 
+  bool was_holding_lock = lock_held_by_current_thread (&filesys_lock);
+
   switch (vme->type) {
     case VM_BIN:
       if (load_file(new_frame->kaddr, vme) == false) {
@@ -642,10 +648,21 @@ handle_mm_fault (struct vm_entry *vme)
       }
       break;
     case VM_FILE:
+      if (!was_holding_lock)
+        lock_acquire (&filesys_lock);
+
       if (load_file(new_frame->kaddr, vme) == false) {
         free_frame(new_frame->kaddr);
+
+        if (!was_holding_lock)
+          lock_release (&filesys_lock);
+
         return false;
       }
+
+      if (!was_holding_lock)
+        lock_release (&filesys_lock);
+        
       break;
     case VM_ANON:
       swap_in(vme->swap_slot, new_frame->kaddr);
