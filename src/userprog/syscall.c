@@ -3,6 +3,7 @@
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "threads/synch.h"
 #include "userprog/pagedir.h"
 #include "threads/vaddr.h"
 #include "devices/shutdown.h"
@@ -57,7 +58,7 @@ check_valid_address (void *addr, void* esp)
 {
   if (is_kernel_vaddr(addr) || addr < USER_VADDR_BOTTOM) {
     exit(-1);
-    // return NULL;
+    return NULL;
   }
   struct vm_entry* vme;
   vme = find_vme(addr);
@@ -183,15 +184,22 @@ int wait (pid_t pid) {
 
 /* file create system call */
 bool create (const char *file, unsigned initial_size) {
-  // lock_acquire (&filesys_lock);
 
+  bool is_already_holded = lock_held_by_current_thread(&filesys_lock);
+  if (!is_already_holded) {
+    lock_acquire (&filesys_lock);
+  }
+  
   if (file == NULL) {
     // lock_release (&filesys_lock);
     exit(-1);
   }
   // check_valid_address(file);
   bool is_created = filesys_create(file, initial_size);
-  // lock_release (&filesys_lock);
+  // if (is_created == false) {
+  //   PANIC("파일 시스템으로 생성이 안됨");
+  // }
+  lock_release (&filesys_lock);
   return is_created;
 }
 
@@ -217,10 +225,14 @@ int open (const char *file) {
   struct thread *cur;
 
   /* prevent race condition */
-  lock_acquire (&filesys_lock);
+  bool is_already_holded = lock_held_by_current_thread(&filesys_lock);
+  if (!is_already_holded) {
+    lock_acquire (&filesys_lock);
+  }
 
   struct file *f = filesys_open(file);
   if (f == NULL) {
+    // PANIC("파일 시스템 오픈이 안됨");
     lock_release (&filesys_lock);
     return -1;
   }
@@ -249,7 +261,10 @@ int filesize (int fd) {
 /* file read system call */
 int read (int fd, void *buffer, unsigned size) {
   // check_valid_address(buffer);
-  lock_acquire (&filesys_lock);
+  bool is_already_holded = lock_held_by_current_thread(&filesys_lock);
+  if (!is_already_holded) {
+    lock_acquire (&filesys_lock);
+  }
   if (fd == 0) {
     unsigned i;
     uint8_t *local_buffer = (uint8_t *)buffer;
@@ -272,7 +287,10 @@ int read (int fd, void *buffer, unsigned size) {
 /* file write system call */
 int write (int fd, const void *buffer, unsigned size) {
   // check_valid_address(buffer);
-  lock_acquire (&filesys_lock);
+  bool is_already_holded = lock_held_by_current_thread(&filesys_lock);
+  if (!is_already_holded) {
+    lock_acquire (&filesys_lock);
+  }
   if (fd == 1) {
     putbuf(buffer, size);
     lock_release (&filesys_lock);
@@ -310,9 +328,12 @@ unsigned tell (int fd) {
 
 /* file close system call */
 void close (int fd) {
-  // lock_acquire (&filesys_lock);
+  bool is_already_holded = lock_held_by_current_thread(&filesys_lock);
+  if (!is_already_holded) {
+    lock_acquire (&filesys_lock);
+  }
   process_close_file(fd);
-  // lock_release (&filesys_lock);
+  lock_release (&filesys_lock);
 }
 
 struct file *process_get_file(int fd) {
@@ -338,6 +359,8 @@ void process_close_file(int fd) {
     cur->pcb->fdt[index] = cur->pcb->fdt[index + 1];
     index ++;
   }while(cur->pcb->fdt[index] != NULL);
+  // cur->pcb->fdt[index] = NULL;
+  // for (index = fd; index < )
   cur->pcb->next_fd--;
 }
 
@@ -442,7 +465,10 @@ do_munmap(struct mmap_file *mmap_file)
       addr = pagedir_get_page(cur->pagedir, vme->vaddr);
 
       if (pagedir_is_dirty(cur->pagedir, vme->vaddr) == true) {
-        lock_acquire(&filesys_lock);
+        bool is_already_holded = lock_held_by_current_thread(&filesys_lock);
+        if (!is_already_holded) {
+          lock_acquire (&filesys_lock);
+        }
         file_write_at(vme->file, vme->vaddr, vme->read_bytes, vme->offset);
         lock_release(&filesys_lock);
       }

@@ -13,10 +13,13 @@
 static unsigned vm_hash_func (const struct hash_elem *e, void *aux);
 static bool vm_less_func (const struct hash_elem *a, const struct hash_elem *b, void *aux);
 
+struct lock vm_lock;
+
 void
 vm_init (struct hash *vm_table)
 {
   bool success = hash_init(vm_table, vm_hash_func, vm_less_func, NULL);
+  lock_init(&vm_lock);
   if (!success) {
     PANIC("vm_init failed 관련 invarient");
   }
@@ -40,7 +43,13 @@ vm_less_func (const struct hash_elem *a, const struct hash_elem *b, void *aux)
 bool
 insert_vme (struct hash *vm, struct vm_entry *vme)
 {
-  return hash_insert(vm, &vme->elem) == NULL;
+  bool is_already_holded = lock_held_by_current_thread(&vm_lock);
+  if (!is_already_holded) {
+    lock_acquire (&vm_lock);
+  }
+  bool is_inserted = (hash_insert(vm, &vme->elem) == NULL);
+  lock_release(&vm_lock);
+  return is_inserted;
 }
 
 bool
@@ -48,6 +57,10 @@ delete_vme (struct hash *vm, struct vm_entry *vme)
 {
   if (!hash_delete (vm, &vme->elem)){
     return false;
+  }
+  bool is_already_holded = lock_held_by_current_thread(&vm_lock);
+  if (!is_already_holded) {
+    lock_acquire (&vm_lock);
   }
 
   if (vme->is_loaded) {
@@ -60,6 +73,7 @@ delete_vme (struct hash *vm, struct vm_entry *vme)
   // swap_clear (vme->swap_slot);
   vme->type = NULL;
   free (vme);
+  lock_release(&vm_lock);
   return true;
 }
 
@@ -82,7 +96,12 @@ find_vme (void *vaddr)
 void
 vm_destroy (struct hash *vm)
 {
+  bool is_already_holded = lock_held_by_current_thread(&vm_lock);
+  if (!is_already_holded) {
+    lock_acquire (&vm_lock);
+  }
   hash_destroy (vm, vm_destroy_func);
+  lock_release(&vm_lock);
 }
 
 void

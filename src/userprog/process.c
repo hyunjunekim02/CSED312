@@ -377,8 +377,13 @@ load (const char *file_name, void (**eip) (void), void **esp)
         goto done;
       file_seek (file, file_ofs);
 
-      if (file_read (file, &phdr, sizeof phdr) != sizeof phdr)
+      lock_acquire(&filesys_lock);
+      if (file_read (file, &phdr, sizeof phdr) != sizeof phdr){
+        lock_release(&filesys_lock);
         goto done;
+      }
+      lock_release(&filesys_lock);
+
       file_ofs += sizeof phdr;
       switch (phdr.p_type) 
         {
@@ -550,6 +555,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       if (vme == NULL) {
         return false;
       }
+      memset (vme, 0, sizeof (struct vm_entry));
       vme->type = VM_BIN;
       vme->vaddr = upage;
       vme->writable = writable;

@@ -155,26 +155,31 @@ page_fault (struct intr_frame *f)
       struct vm_entry *vme = find_vme(fault_addr);
       if (vme == NULL) {
          if (!verify_stack ((int32_t) fault_addr, f->esp)){
+            // exit(-9999991);
             exit(-1);
          }
          expand_stack (fault_addr);
          return;
       }
       if (handle_mm_fault(vme) == false) {
+         // exit(-9999992);
          exit(-1);
       }
    }
 
    if(is_kernel_vaddr(fault_addr)/* || (write && user)*/){
+      // exit(-9999993);
       exit(-1);
    }
 
    if (write) {
       struct vm_entry *vme = find_vme(fault_addr);
       if (vme == NULL) {
+         // exit(-9999994);
          exit(-1);
       }
       if (vme->writable == false) {
+         // exit(-9999995);
          exit(-1);
       }
    }
