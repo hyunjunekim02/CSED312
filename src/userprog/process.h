@@ -14,4 +14,7 @@ void set_stack_arguments (char **argv, int argc, void **esp);
 
 bool handle_mm_fault (struct vm_entry *vme);
 
+bool expand_stack(void *addr);
+bool verify_stack(int32_t addr, int32_t esp);
+
 #endif /* userprog/process.h */

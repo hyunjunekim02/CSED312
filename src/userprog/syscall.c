@@ -59,7 +59,15 @@ check_valid_address (void *addr, void* esp)
     exit(-1);
     // return NULL;
   }
-  return find_vme(addr);
+  struct vm_entry* vme;
+  vme = find_vme(addr);
+  if(vme == NULL){
+    if (!verify_stack ((int32_t) addr, (int32_t) esp)){
+      exit (-1);
+    }
+    expand_stack (addr); 
+  }
+  return vme;
 }
 
 /* System call handler */

@@ -689,4 +689,51 @@ handle_mm_fault (struct vm_entry *vme)
   vme->is_loaded = true;
   return true;
 }
-  
+
+bool
+expand_stack(void *addr){
+  struct frame *expand_frame;
+  void *upage = pg_round_down (addr);
+  bool success = false;
+
+  expand_frame = palloc_frame (PAL_USER | PAL_ZERO);
+  if (expand_frame != NULL){
+    success = install_page(upage, expand_frame->kaddr, true);
+    add_frame_to_frame_table (expand_frame);
+    if(success){
+      struct vm_entry *vme = malloc(sizeof(struct vm_entry));
+      if(vme == NULL){
+        free_frame(expand_frame->kaddr);
+        success = false;
+      }
+      expand_frame->vme =vme;
+      memset(expand_frame->vme, 0, sizeof (struct vm_entry));
+
+      expand_frame->vme->type = VM_ANON;
+      expand_frame->vme->vaddr = upage;
+      expand_frame->vme->writable = true;
+      expand_frame->vme->is_loaded = true;
+      expand_frame->vme->offset = 0;
+      expand_frame->vme->read_bytes = 0;
+      expand_frame->vme->zero_bytes = PGSIZE;
+      expand_frame->vme->swap_slot = 0;
+      expand_frame->vme->file = NULL;
+      insert_vme (&thread_current ()->vm_table, expand_frame->vme);
+    }
+    else{
+      free_frame(expand_frame->kaddr);
+    }
+  }
+  return success;
+}
+
+bool
+verify_stack(int32_t addr, int32_t esp)
+{
+  if (!is_user_vaddr(addr) || esp - addr > 32 || 0xC0000000UL - addr > 8 * 1024 * 1024) {
+    return false;
+  }
+  else{
+    return true;
+  }
+}
