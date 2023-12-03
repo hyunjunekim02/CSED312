@@ -65,6 +65,7 @@ free_frame(void *kaddr)
   struct frame *frame = NULL;
   struct list_elem *e;
 
+  lock_acquire(&ft_lock);
   for (e = list_begin (&frame_table); e != list_end (&frame_table); e = list_next (e)){
     struct frame *temp_frame = list_entry (e, struct frame, ft_elem);
     if (temp_frame->kaddr == kaddr){
@@ -72,17 +73,16 @@ free_frame(void *kaddr)
         break;
     }
   }
+  lock_release(&ft_lock);
 }
 
 void
 _free_frame(struct frame* frame)
 {
-  // lock_acquire(&ft_lock);
   pagedir_clear_page (frame->owner_thread->pagedir, frame->vme->vaddr);
   del_frame_from_frame_table(frame);
   palloc_free_page(frame->kaddr);
   free(frame);
-  // lock_release(&ft_lock);
 }
 
 static struct list_elem*

@@ -49,8 +49,15 @@ delete_vme (struct hash *vm, struct vm_entry *vme)
   if (!hash_delete (vm, &vme->elem)){
     return false;
   }
+
+  if (vme->is_loaded) {
+    // palloc_free_page(vme->vaddr);
+    // pagedir_clear_page(pd, vme->vaddr);
+    free_frame(vme->vaddr);
+    swap_clear (vme->swap_slot);
+  }
   // free_frame (vme->vaddr);
-  swap_clear (vme->swap_slot);
+  // swap_clear (vme->swap_slot);
   free (vme);
   return true;
 }
