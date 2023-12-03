@@ -58,6 +58,7 @@ delete_vme (struct hash *vm, struct vm_entry *vme)
   }
   // free_frame (vme->vaddr);
   // swap_clear (vme->swap_slot);
+  vme->type = NULL;
   free (vme);
   return true;
 }
@@ -96,7 +97,7 @@ vm_destroy_func (struct hash_elem *e, void *aux UNUSED)
     free_frame(vme->vaddr);
     swap_clear (vme->swap_slot);
   }
-
+  vme->type = NULL;
   free(vme);
 }
 

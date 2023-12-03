@@ -94,7 +94,7 @@ find_victim(void) {
   while (true) {
     for (victim = list_begin(&frame_table); victim != list_end(&frame_table); victim = list_next(victim)) {
       struct frame *f = list_entry(victim, struct frame, ft_elem);
-      if (f->vme->type == VM_BIN || f->vme->type == VM_FILE || f->vme->type == VM_ANON) {
+      if ((f->vme->type == VM_BIN || f->vme->type == VM_FILE || f->vme->type == VM_ANON) && f->owner_thread->pagedir != NULL) {
         if (pagedir_is_accessed(f->owner_thread->pagedir, f->vme->vaddr)) {
           pagedir_set_accessed(f->owner_thread->pagedir, f->vme->vaddr, false);
         }
