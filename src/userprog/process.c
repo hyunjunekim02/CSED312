@@ -592,6 +592,7 @@ setup_stack (void **esp)
   
   struct vm_entry *vme = malloc(sizeof(struct vm_entry));
   if (vme == NULL) {
+    free_frame (kpage->kaddr);
     return false;
   }
   kpage->vme = vme;
@@ -634,7 +635,12 @@ handle_mm_fault (struct vm_entry *vme)
   struct frame *new_frame = palloc_frame(PAL_USER);
   new_frame->vme = vme;
 
+  if (new_frame == NULL) {
+    PANIC("frame이 무조건 할당 되었어야 한다");
+  }
+
   if (new_frame->kaddr == NULL) {
+    PANIC("lru에 의해 반드시 할당됐어야 함");
     return false;
   }
 

@@ -47,13 +47,21 @@ palloc_frame (enum palloc_flags flags)
   }
 
   // add_frame_to_frame_table(frame);
+  if (frame->kaddr == NULL) {
+    PANIC("frame->kaddr는 반드시 존재해야 함");
+  }
+  if (frame->owner_thread == NULL) {
+    PANIC("frame->owner_thread는 반드시 존재해야 함");
+  }
+  if (frame->owner_thread->pagedir == NULL) {
+    PANIC("frame->owner_thread는 반드시 존재해야 함");
+  }
   return frame;
 }
 
 void
 free_frame(void *kaddr)
 {
-  lock_acquire(&ft_lock);
   struct frame *frame = NULL;
   struct list_elem *e;
 
@@ -64,16 +72,17 @@ free_frame(void *kaddr)
         break;
     }
   }
-  lock_release(&ft_lock);
 }
 
 void
 _free_frame(struct frame* frame)
 {
+  // lock_acquire(&ft_lock);
   pagedir_clear_page (frame->owner_thread->pagedir, frame->vme->vaddr);
   del_frame_from_frame_table(frame);
   palloc_free_page(frame->kaddr);
   free(frame);
+  // lock_release(&ft_lock);
 }
 
 static struct list_elem*

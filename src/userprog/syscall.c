@@ -175,20 +175,29 @@ int wait (pid_t pid) {
 
 /* file create system call */
 bool create (const char *file, unsigned initial_size) {
+  // lock_acquire (&filesys_lock);
+
   if (file == NULL) {
+    // lock_release (&filesys_lock);
     exit(-1);
   }
   // check_valid_address(file);
-  return filesys_create(file, initial_size);
+  bool is_created = filesys_create(file, initial_size);
+  // lock_release (&filesys_lock);
+  return is_created;
 }
 
 /* file remove system call */
 bool remove (const char *file) {
+  // lock_acquire (&filesys_lock);
   if (file == NULL) {
+    // lock_release (&filesys_lock);
     exit(-1);
   }
   // check_valid_address(file);
-  return filesys_remove(file);
+  bool is_removed = filesys_remove(file);
+  // lock_release (&filesys_lock);
+  return is_removed;
 }
 
 /* file open system call */
@@ -247,8 +256,9 @@ int read (int fd, void *buffer, unsigned size) {
     lock_release (&filesys_lock);
     return -1;
   }
+  off_t bytes = file_read(f, buffer, size);
   lock_release (&filesys_lock);
-  return file_read(f, buffer, size);
+  return bytes;
 }
 
 /* file write system call */
@@ -265,17 +275,20 @@ int write (int fd, const void *buffer, unsigned size) {
     lock_release (&filesys_lock);
     return -1;
   }
+  off_t bytes = file_write(f, buffer, size);
   lock_release (&filesys_lock);
-  return file_write(f, buffer, size);
+  return bytes;
 }
 
 /* file seek system call */
 void seek (int fd, unsigned position) {
+  // lock_acquire (&filesys_lock);
   struct file *f = process_get_file(fd);
   if (f == NULL) {
     return;
   }
   file_seek(f, position);
+  // lock_release (&filesys_lock);
 }
 
 /* file tell system call */
@@ -289,7 +302,9 @@ unsigned tell (int fd) {
 
 /* file close system call */
 void close (int fd) {
+  // lock_acquire (&filesys_lock);
   process_close_file(fd);
+  // lock_release (&filesys_lock);
 }
 
 struct file *process_get_file(int fd) {
@@ -357,7 +372,7 @@ mmap (int fd, void *addr)
     vme->type = VM_FILE;
     vme->vaddr = addr;
     vme->writable = true;
-    vme->is_loaded = true;
+    vme->is_loaded = false;
     vme->offset = offset;
     vme->read_bytes = length < PGSIZE ? length : PGSIZE;
     vme->zero_bytes = 0;
