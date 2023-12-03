@@ -582,8 +582,8 @@ setup_stack (void **esp)
   kpage = palloc_frame (PAL_USER | PAL_ZERO);
   if (kpage != NULL) 
     {
-      add_frame_to_frame_table(kpage);
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage->kaddr, true);
+      add_frame_to_frame_table(kpage);
       if (success)
         *esp = PHYS_BASE;
       else

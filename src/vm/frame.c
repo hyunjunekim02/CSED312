@@ -37,6 +37,7 @@ palloc_frame (enum palloc_flags flags)
   if (frame == NULL){
     return NULL;
   }
+  lock_acquire(&ft_lock);
 
   memset (frame, 0, sizeof (struct frame));
   frame->owner_thread = thread_current ();
@@ -56,6 +57,8 @@ palloc_frame (enum palloc_flags flags)
   if (frame->owner_thread->pagedir == NULL) {
     PANIC("frame->owner_thread는 반드시 존재해야 함");
   }
+
+  lock_release(&ft_lock);
   return frame;
 }
 
@@ -91,11 +94,13 @@ find_victim(void) {
   while (true) {
     for (victim = list_begin(&frame_table); victim != list_end(&frame_table); victim = list_next(victim)) {
       struct frame *f = list_entry(victim, struct frame, ft_elem);
-      if (pagedir_is_accessed(f->owner_thread->pagedir, f->vme->vaddr)) {
-        pagedir_set_accessed(f->owner_thread->pagedir, f->vme->vaddr, false);
-      }
-      else {
-        return victim;
+      if (f->vme->type == VM_BIN || f->vme->type == VM_FILE || f->vme->type == VM_ANON) {
+        if (pagedir_is_accessed(f->owner_thread->pagedir, f->vme->vaddr)) {
+          pagedir_set_accessed(f->owner_thread->pagedir, f->vme->vaddr, false);
+        }
+        else {
+          return victim;
+        }
       }
     }
   }
@@ -107,7 +112,7 @@ find_victim(void) {
 
 void*
 lru_clock_algorithm(enum palloc_flags flags) {
-  lock_acquire(&ft_lock);
+  // lock_acquire(&ft_lock);
   struct frame *victim_frame = list_entry(find_victim(), struct frame, ft_elem);
   struct thread *victim_thread = victim_frame->owner_thread;
   struct vm_entry *victim_vme = victim_frame->vme;
@@ -129,6 +134,6 @@ lru_clock_algorithm(enum palloc_flags flags) {
   }
 
   _free_frame(victim_frame);
-  lock_release(&ft_lock);
+  // lock_release(&ft_lock);
   return palloc_get_page(flags);
 }
