@@ -92,7 +92,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       break;
     case SYS_EXEC:
       check_valid_address(f->esp + 4, f->esp);
-      // check_valid_buffer((void *)*(uint32_t *)(f->esp + 4), strlen((char *)*(uint32_t *)(f->esp + 4)) + 1, f->esp, false);
+      check_valid_string((void *)*(uint32_t *)(f->esp + 4), f->esp);
       f->eax = exec((const char *)*(uint32_t *)(f->esp + 4));
       break;
     case SYS_WAIT:
@@ -102,16 +102,18 @@ syscall_handler (struct intr_frame *f UNUSED)
     case SYS_CREATE:
       check_valid_address(f->esp + 16, f->esp);
       check_valid_address(f->esp + 20, f->esp);
+      check_valid_string((void *)*(uint32_t *)(f->esp + 4), f->esp);
       bool is_created = create((const char *)*(uint32_t *)(f->esp + 16), (unsigned)*(uint32_t *)(f->esp + 20));
       f->eax = is_created;
       break;
     case SYS_REMOVE:
       check_valid_address(f->esp + 4, f->esp);
+      check_valid_string((void *)*(uint32_t *)(f->esp + 4), f->esp);
       f->eax = remove((const char*)*(uint32_t *)(f->esp + 4));
       break;
     case SYS_OPEN:
       check_valid_address(f->esp + 4, f->esp);
-      // check_valid_buffer((void *)*(uint32_t *)(f->esp + 4), strlen((char *)*(uint32_t *)(f->esp + 4)) + 1, f->esp, false);
+      check_valid_string((void *)*(uint32_t *)(f->esp + 4), f->esp);
       int fd = open((const char*)*(uint32_t *)(f->esp + 4));
       f->eax = fd;
       break;
@@ -120,12 +122,17 @@ syscall_handler (struct intr_frame *f UNUSED)
       f->eax = filesize((int)*(uint32_t *)(f->esp + 4));
       break;
     case SYS_READ:
+      check_valid_address(f->esp + 20, f->esp);
+      check_valid_address(f->esp + 24, f->esp);
+      check_valid_address(f->esp + 28, f->esp);
       check_valid_buffer((void *)*(uint32_t *)(f->esp + 24), (unsigned)*(uint32_t *)(f->esp + 28), f->esp, true);
       f->eax = read((int)*(uint32_t *)(f->esp+20), (void *)*(uint32_t *)(f->esp + 24), (unsigned)*((uint32_t *)(f->esp + 28)));
       break;
     case SYS_WRITE:
-      // check_valid_buffer((void *)*(uint32_t *)(f->esp + 24), (unsigned)*(uint32_t *)(f->esp + 28), f->esp, false);
-      check_valid_string((void *)*(uint32_t *)(f->esp + 24), f->esp);
+      check_valid_address(f->esp + 20, f->esp);
+      check_valid_address(f->esp + 24, f->esp);
+      check_valid_address(f->esp + 28, f->esp);
+      check_valid_buffer((void *)*(uint32_t *)(f->esp + 24), (unsigned)*(uint32_t *)(f->esp + 28), f->esp, false);
       f->eax = write((int)*(uint32_t *)(f->esp+20), (void *)*(uint32_t *)(f->esp + 24), (unsigned)*((uint32_t *)(f->esp + 28)));
       break;
     case SYS_SEEK:
@@ -185,20 +192,15 @@ int wait (pid_t pid) {
 /* file create system call */
 bool create (const char *file, unsigned initial_size) {
 
-  bool is_already_holded = lock_held_by_current_thread(&filesys_lock);
-  if (!is_already_holded) {
-    lock_acquire (&filesys_lock);
-  }
-  
   if (file == NULL) {
-    // lock_release (&filesys_lock);
     exit(-1);
   }
-  // check_valid_address(file);
+
+  bool lock_held = lock_held_by_current_thread(&filesys_lock);
+  if (!lock_held) {
+    lock_acquire (&filesys_lock);
+  }
   bool is_created = filesys_create(file, initial_size);
-  // if (is_created == false) {
-  //   PANIC("파일 시스템으로 생성이 안됨");
-  // }
   lock_release (&filesys_lock);
   return is_created;
 }
@@ -225,14 +227,13 @@ int open (const char *file) {
   struct thread *cur;
 
   /* prevent race condition */
-  bool is_already_holded = lock_held_by_current_thread(&filesys_lock);
-  if (!is_already_holded) {
+  bool lock_held = lock_held_by_current_thread(&filesys_lock);
+  if (!lock_held) {
     lock_acquire (&filesys_lock);
   }
 
   struct file *f = filesys_open(file);
   if (f == NULL) {
-    // PANIC("파일 시스템 오픈이 안됨");
     lock_release (&filesys_lock);
     return -1;
   }
@@ -287,8 +288,8 @@ int read (int fd, void *buffer, unsigned size) {
 /* file write system call */
 int write (int fd, const void *buffer, unsigned size) {
   // check_valid_address(buffer);
-  bool is_already_holded = lock_held_by_current_thread(&filesys_lock);
-  if (!is_already_holded) {
+  bool lock_held = lock_held_by_current_thread(&filesys_lock);
+  if (!lock_held) {
     lock_acquire (&filesys_lock);
   }
   if (fd == 1) {
@@ -328,8 +329,8 @@ unsigned tell (int fd) {
 
 /* file close system call */
 void close (int fd) {
-  bool is_already_holded = lock_held_by_current_thread(&filesys_lock);
-  if (!is_already_holded) {
+  bool lock_held = lock_held_by_current_thread(&filesys_lock);
+  if (!lock_held) {
     lock_acquire (&filesys_lock);
   }
   process_close_file(fd);
@@ -465,8 +466,8 @@ do_munmap(struct mmap_file *mmap_file)
       addr = pagedir_get_page(cur->pagedir, vme->vaddr);
 
       if (pagedir_is_dirty(cur->pagedir, vme->vaddr) == true) {
-        bool is_already_holded = lock_held_by_current_thread(&filesys_lock);
-        if (!is_already_holded) {
+        bool lock_held = lock_held_by_current_thread(&filesys_lock);
+        if (!lock_held) {
           lock_acquire (&filesys_lock);
         }
         file_write_at(vme->file, vme->vaddr, vme->read_bytes, vme->offset);

@@ -184,10 +184,5 @@ page_fault (struct intr_frame *f)
       }
    }
 
-//   /* exit case */
-//   if (!user || is_kernel_vaddr(fault_addr) || not_present) {
-//     exit(-1);
-//   }
-
 }
 

@@ -132,18 +132,33 @@ bool load_file (void *kaddr, struct vm_entry *vme)
 void
 check_valid_buffer (void* buffer, unsigned size, void* esp, bool to_write)
 {
-  for (int i = 0; i < size; i++) {
-    struct vm_entry *vme = check_valid_address(buffer + i, esp);
-    if (vme == NULL) {
-      exit(-1);
-    }
-    if (to_write == true && vme->writable == false) {
-      exit(-1);
-    }
-    // if (to_write == false && vme->writable == true) {
-    //   exit(-1);
-    // }
-  }
+  // for (int i = 0; i < size; i++) {
+  //   struct vm_entry *vme = check_valid_address(buffer + i, esp);
+  //   if (vme == NULL) {
+  //     exit(-1);
+  //   }
+  //   if (to_write == true && vme->writable == false) {
+  //     exit(-1);
+  //   }
+  //   // if (to_write == false && vme->writable == true) {
+  //   //   exit(-1);
+  //   // }
+  // }
+  struct vm_entry *vme;
+	unsigned i;
+	char *check_buffer = (char *)buffer;
+	for(i=0; i<size; i++)
+	{
+		vme = check_valid_address((void *)check_buffer, esp);
+		if(vme != NULL){
+			if(to_write == true){
+				if(vme->writable == false){
+          exit(-1);
+        }
+			}
+		}
+		check_buffer++;
+	}
 }
 
 void
