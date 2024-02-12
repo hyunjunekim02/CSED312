@@ -1,6 +1,6 @@
 # CSED312 Operating System
 
-This repo is associated with POSTECH CSED312 OS projects, Stanford Pintos. [Pintos](https://web.stanford.edu/class/cs140/projects/pintos/pintos.html)
+This repo is associated with POSTECH CSED312 OS projects, which is Stanford [Pintos](https://web.stanford.edu/class/cs140/projects/pintos/pintos.html).
 
 ## Overview
 
